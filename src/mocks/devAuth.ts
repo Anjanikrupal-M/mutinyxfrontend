@@ -1,10 +1,14 @@
 // ─────────────────────────────────────────────────────────────
-// Dev-only demo login — lets you into the app without a backend.
-// Only honoured when import.meta.env.DEV is true (npm run dev);
-// production builds never accept these credentials.
+// Demo login — lets you into the app without a backend, on sample data.
+// Always on in local dev (npm run dev). In a production build it is off
+// unless VITE_ENABLE_DEMO=true is set (e.g. in Vercel's environment
+// variables) — useful for showing the app before the backend allows the
+// deployed domain. Remove that variable and redeploy to switch it off.
 // ─────────────────────────────────────────────────────────────
 
 import type { User } from '@/shared/stores/authStore';
+
+const DEMO_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO === 'true';
 
 export const DEV_DEMO_CREDENTIALS = {
     email: 'demo@mutinyx.dev',
@@ -53,12 +57,12 @@ export const DEV_DEMO_USER: User = {
 
 export function isDevDemoLogin(email: string, password: string): boolean {
     return (
-        import.meta.env.DEV &&
+        DEMO_ENABLED &&
         email.trim().toLowerCase() === DEV_DEMO_CREDENTIALS.email &&
         password === DEV_DEMO_CREDENTIALS.password
     );
 }
 
 export function isDevDemoUser(user?: Pick<User, 'id'> | null): boolean {
-    return import.meta.env.DEV && user?.id === DEV_DEMO_USER.id;
+    return DEMO_ENABLED && user?.id === DEV_DEMO_USER.id;
 }
