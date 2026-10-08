@@ -1,0 +1,1 @@
+export const DEFAULT_PLATFORM_FEE_PERCENT = Number(import.meta.env.VITE_DEFAULT_PLATFORM_FEE_PERCENT ?? 5);

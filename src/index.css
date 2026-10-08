@@ -1,0 +1,1118 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+@import "lenis/dist/lenis.css";
+
+@font-face {
+  font-family: 'SF Pro';
+  src: url('./assets/SF-Pro.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─────────────────────────────────────────────────────────── */
+/* MutinyX Design System — "Light & Gold"                       */
+/* Premium, minimal, high-contrast. White surfaces (sidebar,    */
+/* topbar, cards) against a warm off-white canvas, gold used    */
+/* sparingly as the signature accent. Depth comes from soft,    */
+/* layered shadows rather than hard borders.                    */
+/* ─────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    /* Page background — warm off-white canvas so white cards lift with shadow, not just border */
+    --background: 40 20% 97%;
+    --foreground: 0 0% 4%;
+
+    /* Cards — pure white, lifts off the warm canvas via shadow-premium */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 4%;
+
+    /* Primary — Black for buttons/actions */
+    --primary: 0 0% 6%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary — Light warm-gray chips/badges inside cards */
+    --secondary: 40 12% 95%;
+    --secondary-foreground: 0 0% 12%;
+
+    /* Muted */
+    --muted: 40 10% 93%;
+    --muted-foreground: 0 0% 42%;
+
+    /* Accent — Brand Yellow #fedc03 */
+    --accent: 49 98% 50%;
+    --accent-foreground: 0 0% 4%;
+
+    /* Destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Success */
+    --success: 152 60% 40%;
+    --success-foreground: 0 0% 98%;
+
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 4%;
+
+    /* Borders — soft, secondary to shadow for depth */
+    --border: 40 12% 89%;
+    --input: 40 12% 87%;
+    --ring: 49 98% 50%;
+
+    --radius: 0.875rem;
+
+    /* Sidebar — near-black rail, matching the admin panel's dark nav. Values are the HSL
+       equivalents of admin's oklch tokens (globals.css): 0.12 ground, 0.95 ink, 0.2 hover,
+       0.25 hairline. Gold stays the accent for the active item. */
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 94%;
+    --sidebar-primary: 49 98% 50%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 94%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 49 98% 50%;
+  }
+}
+
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Browser autofill paints inputs light blue; keep them on the card surface with our text colour.
+     The long background transition stops Chrome's own fill from ever showing. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: hsl(var(--foreground));
+    caret-color: hsl(var(--foreground));
+    box-shadow: 0 0 0 1000px hsl(var(--card)) inset;
+    transition: background-color 9999s ease-out 0s;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' 32;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    letter-spacing: -0.025em;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring) / 0.4);
+  }
+}
+
+@layer utilities {
+
+  /* Brand accent utilities */
+  .accent-border-left {
+    border-left: 2px solid hsl(49 98% 50%);
+  }
+
+  .accent-border-top {
+    border-top: 2px solid hsl(49 98% 50%);
+  }
+
+  .accent-border-bottom {
+    border-bottom: 2px solid hsl(49 98% 50%);
+  }
+
+  .accent-glow {
+    box-shadow: 0 0 20px -5px hsl(49 98% 50% / 0.3);
+  }
+
+  .accent-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: hsl(49 98% 50%);
+  }
+
+  /* Glass */
+  .glass {
+    background: hsl(0 0% 100% / 0.8);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid hsl(0 0% 90% / 0.8);
+  }
+
+  /* Hover lift */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px hsl(0 0% 0% / 0.08);
+  }
+
+  /* Card hover with accent border */
+  .card-hover {
+    transition: all 0.2s ease;
+  }
+
+  .card-hover:hover {
+    border-color: hsl(49 98% 50% / 0.4);
+    box-shadow: 0 0 0 1px hsl(49 98% 50% / 0.1), 0 4px 16px -2px hsl(0 0% 0% / 0.14);
+  }
+
+  /* ───────────────────────────────────────────────────────────────
+     Surface / elevation system
+
+     Depth is carried by ONE level of elevation at a time. A page-level
+     card lifts off the canvas; anything nested inside it must not lift
+     again, or the page reads as a pile of floating rectangles rather
+     than a document. Three levels, and no more:
+
+       .surface        page-level card   hairline ring + whisper shadow
+       .surface-inset  nested panel      hairline ring, no shadow
+
+     Shadows are deliberately far softer than a marketing page would use —
+     at dashboard density, a 20px blur under every card is visual noise.
+
+     Neither sets a radius: the caller picks rounded-xl/2xl/3xl to suit its
+     scale, so these never fight a Tailwind radius utility over source order.
+     ─────────────────────────────────────────────────────────────── */
+  .bg-card {
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.03), 0 4px 12px -6px hsl(0 0% 0% / 0.07);
+    transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .surface {
+    background-color: hsl(var(--card));
+    box-shadow: 0 0 0 1px hsl(0 0% 0% / 0.06), 0 1px 2px hsl(0 0% 0% / 0.03), 0 4px 12px -6px hsl(0 0% 0% / 0.07);
+  }
+
+  /* Nested inside a .surface — ring only, so depth never stacks. */
+  .surface-inset {
+    background-color: hsl(var(--card));
+    box-shadow: 0 0 0 1px hsl(0 0% 0% / 0.055);
+  }
+
+  /* NOTE: an auto-fill card grid was tried here and removed. Where a list is
+     served in a fixed page size (Discover pages 12 at a time), letting the
+     column count float produces counts that do not divide the page — 5
+     columns of 12 items strands a row of 2. Such grids use explicit
+     breakpoint column counts chosen against the page size instead. */
+
+  /* Shimmer loading */
+  .shimmer {
+    background: linear-gradient(90deg, hsl(0 0% 91%) 0%, hsl(0 0% 96%) 50%, hsl(0 0% 91%) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Campaign builder density — the builder is a dense multi-column form plus a phone preview,
+     and at 100% it overflows 13–14" MacBooks (1440–1512px wide). Scale it to 90% on laptop
+     widths only: phones/tablets already stack it, and large monitors have the room.
+     Standard CSS zoom (Chrome 128+, Safari, Firefox 126+) keeps layout and pointer math
+     consistent. Portalled popovers/dialogs render at 100%, which is intentional — they stay
+     full-size and readable. */
+  @media (min-width: 1024px) and (max-width: 1600px) {
+    .builder-density {
+      zoom: 0.9;
+    }
+  }
+
+  /* Transition premium */
+  .transition-premium {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(0 0% 85%) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(0 0% 85%);
+    border-radius: 3px;
+  }
+
+  /* Slim chat-style scrollbar — used across the AI Strategist chat surfaces.
+     Thumb is subtle by default and darkens on hover, like modern AI chat UIs. */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(0 0% 82%) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(0 0% 82%);
+    border-radius: 9999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(0 0% 65%);
+  }
+
+  /* AI Scan Animation */
+  @keyframes scan {
+    0% {
+      top: 0%;
+      opacity: 0;
+    }
+
+    50% {
+      opacity: 0.8;
+    }
+
+    100% {
+      top: 100%;
+      opacity: 0;
+    }
+  }
+
+  .animate-scan {
+    animation: scan 1s linear infinite;
+  }
+
+  @keyframes pulse-subtle {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+
+  /* iOS safe area — bottom tab bar clears home indicator on notched iPhones */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Fade-in — used by modals, page transitions, cards */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.18s ease-out both;
+  }
+
+  /* Slide-up — mobile bottom-sheet entry */
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.22s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+}
+
+::selection {
+  background: hsl(49 98% 50% / 0.25);
+  color: hsl(0 0% 4%);
+}
+
+/* Motion is decoration, never information — anyone who has asked their OS to
+   reduce it gets the end state immediately instead of the journey. */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ─── Print styles ───────────────────────────────────────────────────────────
+   Used by the Analytics "Download PDF" button (which calls window.print()).
+
+   Strategy: when printing, the body and the chain of ancestors that contain
+   the .analytics-print-root subtree are made block + visible; ALL siblings
+   along that chain (sidebar, topbar, dialogs, toasts, etc.) are display:none.
+   This collapses the AppShell layout entirely so the print-root content
+   reflows naturally across as many pages as it needs.
+
+   We previously used visibility:hidden which kept the layout boxes in the
+   document flow — that capped the print to a single page because the body
+   ended up the same height as the viewport regardless of how much
+   analytics content there was. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide everything by default; reveal only the chain to .analytics-print-root. */
+  body * {
+    display: none !important;
+  }
+
+  /* Re-show the print root and every ancestor that wraps it. */
+  .analytics-print-root,
+  .analytics-print-root *,
+  body :has(.analytics-print-root) {
+    display: revert !important;
+  }
+
+  /* Within revealed ancestors, hide siblings that are NOT on the path to the print root. */
+  body :has(.analytics-print-root)>*:not(:has(.analytics-print-root)):not(.analytics-print-root) {
+    display: none !important;
+  }
+
+  /* The print root itself: detach from AppShell width/scroll constraints. */
+  .analytics-print-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .analytics-print-root *,
+  body :has(.analytics-print-root) {
+    overflow: visible !important;
+    box-shadow: none !important;
+    transform: none !important;
+    position: static !important;
+  }
+
+  /* Elements explicitly marked as "do not print". */
+  .analytics-print-hide {
+    display: none !important;
+  }
+
+  /* Reels embed iframes + bulky thumbnails are dropped — print should be a
+     dense data summary, not a rich media wall. Each reel card collapses to
+     a header row + metric strip so 6+ fit per A4 page. */
+  .analytics-print-root iframe,
+  .analytics-print-root video,
+  .analytics-print-root [class*="aspect-"] {
+    display: none !important;
+  }
+
+  /* Tighten everything: smaller font, less padding, no shadows. */
+  .analytics-print-root {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  .analytics-print-root h1 {
+    font-size: 18px !important;
+    margin: 0 0 4px !important;
+  }
+
+  .analytics-print-root h2 {
+    font-size: 14px !important;
+    margin: 12px 0 6px !important;
+  }
+
+  .analytics-print-root h3 {
+    font-size: 12px !important;
+    margin: 8px 0 4px !important;
+  }
+
+  .analytics-print-root p {
+    margin: 2px 0 !important;
+  }
+
+  /* Card chrome: no shadows, thinner borders, tight padding. */
+  .analytics-print-root .bg-card,
+  .analytics-print-root .rounded-xl,
+  .analytics-print-root .rounded-2xl {
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    border-color: #e5e7eb !important;
+  }
+
+  .analytics-print-root .p-6,
+  .analytics-print-root .p-5,
+  .analytics-print-root .p-4 {
+    padding: 8px 10px !important;
+  }
+
+  .analytics-print-root .gap-6,
+  .analytics-print-root .gap-5,
+  .analytics-print-root .gap-4 {
+    gap: 6px !important;
+  }
+
+  .analytics-print-root .text-3xl {
+    font-size: 18px !important;
+  }
+
+  .analytics-print-root .text-2xl {
+    font-size: 16px !important;
+  }
+
+  .analytics-print-root .text-lg {
+    font-size: 13px !important;
+  }
+
+  .analytics-print-root .space-y-6>*+* {
+    margin-top: 10px !important;
+  }
+
+  .analytics-print-root .space-y-4>*+* {
+    margin-top: 6px !important;
+  }
+
+  .analytics-print-root .pb-12 {
+    padding-bottom: 0 !important;
+  }
+
+  /* Top metric grid: 4 columns. Pipeline: 3 columns. */
+  .analytics-print-root .md\:grid-cols-2.lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .analytics-print-root .md\:grid-cols-2.lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  /* Reel grid: 3 dense columns regardless of viewport class. */
+  .analytics-print-root .sm\:grid-cols-2.lg\:grid-cols-3.xl\:grid-cols-4 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .analytics-print-root .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  /* Page-break controls so cards aren't split across pages. */
+  .analytics-print-root .bg-card,
+  .analytics-print-root .rounded-xl,
+  .analytics-print-root .rounded-2xl,
+  .analytics-print-root tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Headings shouldn't be orphans at the bottom of a page. */
+  .analytics-print-root h1,
+  .analytics-print-root h2,
+  .analytics-print-root h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Hide loading spinners / "Fetching analytics…" pills — noise in PDF. */
+  .analytics-print-root .animate-spin,
+  .analytics-print-root .animate-pulse {
+    display: none !important;
+  }
+}
+/* ─────────────────────────────────────────────────────────── */
+/* Campaign builder — mode-button icon animations              */
+/* While a .mode-btn is hovered each stroke of its icon moves   */
+/* on its own. Used by the AI Strategist / Step-by-step builder */
+/* buttons in CampaignBuilderPage.                              */
+/* ─────────────────────────────────────────────────────────── */
+@layer components {
+  .mode-icon > * {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  /* AI Strategist: the big star breathes while the small sparks twinkle out of step */
+  .mode-btn:hover .mode-icon-sparkles > :first-child {
+    animation: mode-sparkle-breathe 1.5s ease-in-out infinite;
+  }
+  .mode-btn:hover .mode-icon-sparkles > :not(:first-child) {
+    animation: mode-sparkle-twinkle 1.5s ease-in-out infinite;
+  }
+  .mode-btn:hover .mode-icon-sparkles > :last-child {
+    animation-delay: 0.5s;
+  }
+
+  /* Step-by-step: the list draws itself, one line after another */
+  .mode-btn:hover .mode-icon-steps > * {
+    stroke-dasharray: 30;
+    animation: mode-stroke-draw 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .mode-btn:hover .mode-icon-steps > :nth-child(2) { animation-delay: 0.1s; }
+  .mode-btn:hover .mode-icon-steps > :nth-child(3) { animation-delay: 0.2s; }
+  .mode-btn:hover .mode-icon-steps > :nth-child(4) { animation-delay: 0.3s; }
+  .mode-btn:hover .mode-icon-steps > :nth-child(5) { animation-delay: 0.4s; }
+
+  @keyframes mode-sparkle-breathe {
+    50% { transform: scale(0.8) rotate(14deg); }
+  }
+  @keyframes mode-sparkle-twinkle {
+    50% { opacity: 0.1; transform: scale(0.3); }
+  }
+  @keyframes mode-stroke-draw {
+    from { stroke-dashoffset: 30; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mode-btn:hover .mode-icon > * {
+      animation: none;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────── */
+/* Campaign builder — shadows and motion                        */
+/* Defined here (not in tailwind.config.ts) so they hot-reload  */
+/* with the CSS. Being in @layer utilities they still work with */
+/* variants such as focus-within:shadow-float.                  */
+/* ─────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Tiles: resting card and lifted/focused card. Written through Tailwind's --tw-shadow
+     variables (like its own shadow-* utilities) so they stack with ring-* instead of
+     overwriting it — the focused tile's yellow outline is a ring. */
+  .shadow-card {
+    --tw-shadow: 0 1px 2px hsl(0 0% 7% / 0.04), 0 12px 32px -16px hsl(0 0% 7% / 0.12);
+    --tw-shadow-colored: 0 1px 2px var(--tw-shadow-color), 0 12px 32px -16px var(--tw-shadow-color);
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+  }
+  .shadow-float {
+    --tw-shadow: 0 1px 2px hsl(0 0% 7% / 0.06), 0 16px 40px -12px hsl(0 0% 7% / 0.28);
+    --tw-shadow-colored: 0 1px 2px var(--tw-shadow-color), 0 16px 40px -12px var(--tw-shadow-color);
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+  }
+
+  /* `backwards` fill: once finished the element carries no transform, so it never traps
+     dropdowns/popovers in a stacking context. */
+  .animate-fade-up {
+    animation: builder-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .animate-pop {
+    animation: builder-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  }
+  /* Phone preview: a value that just changed briefly lights up in brand yellow */
+  .animate-flash {
+    animation: builder-flash 0.9s ease-out;
+  }
+  .animate-rise {
+    animation: builder-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .animate-slide-in-left {
+    animation: builder-slide-in-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .animate-shake {
+    animation: builder-shake 0.4s ease-in-out;
+  }
+  .animate-rocket-hop {
+    animation: builder-rocket-hop 1.7s backwards;
+  }
+}
+
+@keyframes builder-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+}
+@keyframes builder-pop {
+  from { opacity: 0; transform: scale(0.5); }
+}
+@keyframes builder-flash {
+  from { background-color: rgb(250 203 3 / 0.4); }
+  to { background-color: transparent; }
+}
+@keyframes builder-rise {
+  from { transform: translateY(110%); }
+}
+@keyframes builder-slide-in-left {
+  from { opacity: 0; transform: translateX(-12px); }
+}
+@keyframes builder-shake {
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+/* Publish button: the rocket rumbles, blasts off out of the button and lands back in place */
+@keyframes builder-rocket-hop {
+  0% { transform: translate(0, 0); }
+  6%, 18% { transform: translate(-1px, 1px); }
+  12%, 24% { transform: translate(1px, -1px); }
+  30% { transform: translate(0, 2px); animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.35); }
+  58% { opacity: 1; transform: translate(30px, -40px) scale(0.8); }
+  59% { opacity: 0; transform: translate(30px, -40px) scale(0.8); }
+  60% { opacity: 0; transform: translate(0, 22px); animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1.2); }
+  100% { opacity: 1; transform: translate(0, 0); }
+}
+
+/* ─────────────────────────────────────────────────────────── */
+/* Influencers — "Ask AI" card effects                          */
+/* ─────────────────────────────────────────────────────────── */
+/* A light that travels round the card's 1px edge: an oversized conic sweep spins behind the
+   card body, and only the sliver showing through the edge gap is visible. */
+.ai-card-ring {
+  position: absolute;
+  inset: -150%;
+  background: conic-gradient(
+    from 0deg,
+    rgb(0 0 0 / 0.07) 0deg,
+    rgb(0 0 0 / 0.07) 250deg,
+    rgb(250 203 3) 320deg,
+    rgb(0 0 0 / 0.07) 360deg
+  );
+  animation: ai-card-ring-spin 6s linear infinite;
+}
+@keyframes ai-card-ring-spin {
+  to { transform: rotate(1turn); }
+}
+
+/* While the AI is thinking: a short light runs along the card's top edge. */
+.ai-card-scan {
+  animation: ai-card-scan 1.4s ease-in-out infinite;
+}
+@keyframes ai-card-scan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-card-ring,
+  .ai-card-scan {
+    animation: none;
+  }
+}
+
+/* "Ask AI" card header: the wand casts now and then (sparks fly from its tip),
+   and a light sweeps across the AI tag. */
+/* Wand tile: a slow glow that swells as the wand casts. */
+.ai-wand-tile {
+  animation: ai-tile-glow 3.6s ease-in-out 1.2s infinite;
+  box-shadow: 0 0 16px -6px rgb(250 203 3 / 0.7);
+}
+@keyframes ai-tile-glow {
+  0%, 40%, 100% { box-shadow: 0 0 16px -6px rgb(250 203 3 / 0.7); }
+  60% { box-shadow: 0 0 30px -2px rgb(250 203 3 / 1); }
+}
+/* The cast: rest, pull back, flick forward, settle. */
+.ai-wand {
+  transform-origin: 25% 75%;
+  animation: ai-wand-cast 3.6s ease-in-out 1.2s infinite;
+}
+@keyframes ai-wand-cast {
+  0%, 44%, 100% { transform: rotate(0); }
+  52% { transform: rotate(-20deg) translate(-1px, 1px); }
+  58% { transform: rotate(10deg); }
+  68% { transform: rotate(-3deg); }
+  76% { transform: rotate(0); }
+}
+/* Sparks burst from the wand's tip at the moment of the flick, each on its own path. */
+.ai-spark {
+  position: absolute;
+  border-radius: 9999px;
+  opacity: 0;
+  animation: 3.6s ease-out 1.2s infinite;
+}
+.ai-spark-1 { animation-name: ai-spark-1; }
+.ai-spark-2 { animation-name: ai-spark-2; }
+.ai-spark-3 { animation-name: ai-spark-3; }
+.ai-spark-4 { animation-name: ai-spark-4; }
+@keyframes ai-spark-1 {
+  0%, 56% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  62% { opacity: 1; transform: translate(5px, -5px) scale(1); }
+  82%, 100% { opacity: 0; transform: translate(14px, -14px) scale(0.3); }
+}
+@keyframes ai-spark-2 {
+  0%, 57% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  63% { opacity: 1; transform: translate(7px, -1px) scale(1); }
+  84%, 100% { opacity: 0; transform: translate(17px, -2px) scale(0.3); }
+}
+@keyframes ai-spark-3 {
+  0%, 57% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  63% { opacity: 1; transform: translate(1px, -7px) scale(1); }
+  84%, 100% { opacity: 0; transform: translate(2px, -17px) scale(0.3); }
+}
+@keyframes ai-spark-4 {
+  0%, 58% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  65% { opacity: 1; transform: translate(6px, 4px) scale(1); }
+  86%, 100% { opacity: 0; transform: translate(13px, 9px) scale(0.3); }
+}
+.ai-tag-shine {
+  position: relative;
+  overflow: hidden;
+}
+.ai-tag-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.85) 50%, transparent 70%);
+  transform: translateX(-130%);
+  animation: ai-tag-shine 3.6s ease-in-out 1.5s infinite;
+}
+@keyframes ai-tag-shine {
+  0%, 60% { transform: translateX(-130%); }
+  85%, 100% { transform: translateX(130%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-wand,
+  .ai-wand-tile,
+  .ai-spark,
+  .ai-tag-shine::after {
+    animation: none;
+  }
+}
+
+/* Dashboard stat cards: chart bars grow up, split-bar segments slide in, the dark card's glow breathes. */
+.stat-bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: stat-bar-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.stat-seg {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: stat-seg-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.stat-glow {
+  animation: stat-glow-breathe 4s ease-in-out infinite;
+}
+
+/* Dashboard stat cards in 3D: they flip up into place on load, then tilt toward the pointer.
+   StatCard sets --rx / --ry (tilt) while the mouse is over it. */
+.stat-3d {
+  transform: perspective(900px) translateY(var(--lift, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  animation: stat-flip-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  will-change: transform;
+}
+.stat-3d:hover {
+  --lift: -3px;
+  transition-duration: 0.12s, 0.3s;
+}
+/* Total budget card: the trend line draws in, the area fades up under it, then the arrowhead
+   keeps nudging up-right to say "growing". */
+.trend-arrow-line {
+  stroke-dasharray: 1;
+  animation: trend-arrow-draw 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.4s backwards;
+}
+.trend-arrow-area {
+  animation: trend-arrow-area 1s ease-out 0.9s backwards;
+}
+.trend-arrow-head {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: trend-arrow-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) 1.4s backwards, trend-arrow-nudge 1.8s ease-in-out 1.8s infinite;
+}
+@keyframes trend-arrow-draw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes trend-arrow-area {
+  from { opacity: 0; }
+}
+@keyframes trend-arrow-pop {
+  from { opacity: 0; transform: scale(0.4); }
+}
+@keyframes trend-arrow-nudge {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(2px, -2px); }
+}
+
+/* PageExplainer step icons: a hover animation matched to each step's meaning. */
+.explainer-icon svg > * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+/* Build: the building rises from its base, windows light up bottom to top, a "+" pops in. */
+.group\/step:hover .explainer-icon-build svg {
+  animation: explainer-build-rise 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom;
+}
+.explainer-icon-build svg > :nth-child(n + 4) {
+  transition: opacity 0.2s;
+}
+.group\/step:hover .explainer-icon-build svg > :nth-child(7) { animation: explainer-window 0.5s ease-out 0.15s backwards; }
+.group\/step:hover .explainer-icon-build svg > :nth-child(6) { animation: explainer-window 0.5s ease-out 0.25s backwards; }
+.group\/step:hover .explainer-icon-build svg > :nth-child(5) { animation: explainer-window 0.5s ease-out 0.35s backwards; }
+.group\/step:hover .explainer-icon-build svg > :nth-child(4) { animation: explainer-window 0.5s ease-out 0.45s backwards; }
+.explainer-build-plus {
+  opacity: 0;
+  transform: scale(0.3) rotate(-90deg);
+  transition: opacity 0.2s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.group\/step:hover .explainer-build-plus {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+  transition-delay: 0.45s;
+}
+/* Switch: the top arrow slides right and the bottom one left, then they settle — swapping places. */
+.group\/step:hover .explainer-icon-switch svg > :nth-child(-n + 2) {
+  animation: explainer-swap-right 0.7s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.group\/step:hover .explainer-icon-switch svg > :nth-child(n + 3) {
+  animation: explainer-swap-left 0.7s cubic-bezier(0.65, 0, 0.35, 1);
+}
+/* Archive: the lid lifts and tips open, the slot dips into the box, then the lid drops shut. */
+.group\/step:hover .explainer-icon-archive svg > :nth-child(1) {
+  animation: explainer-lid 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: left bottom;
+}
+.group\/step:hover .explainer-icon-archive svg > :nth-child(3) {
+  animation: explainer-slot 0.9s ease-in-out;
+}
+@keyframes explainer-build-rise {
+  0%   { transform: translateY(5px) scaleY(0.55); opacity: 0.4; }
+  60%  { transform: translateY(-1px) scaleY(1.06); opacity: 1; }
+  100% { transform: translateY(0) scaleY(1); }
+}
+@keyframes explainer-window {
+  from { opacity: 0; }
+}
+@keyframes explainer-swap-right {
+  0%, 100% { transform: translateX(0); }
+  45%      { transform: translateX(4px); opacity: 0.4; }
+  55%      { transform: translateX(-3px); opacity: 0.4; }
+}
+@keyframes explainer-swap-left {
+  0%, 100% { transform: translateX(0); }
+  45%      { transform: translateX(-4px); opacity: 0.4; }
+  55%      { transform: translateX(3px); opacity: 0.4; }
+}
+@keyframes explainer-lid {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35%      { transform: translateY(-4px) rotate(-14deg); }
+  70%      { transform: translateY(0.5px) rotate(0deg); }
+}
+@keyframes explainer-slot {
+  0%, 100% { transform: translateY(0); }
+  35%, 55% { transform: translateY(3px); opacity: 0.3; }
+}
+
+/* Campaign builder step changes: a yellow streak races along the connector into the new step,
+   a ripple pulses out of the new step's circle, and the step content slides in from the side
+   you're heading (fill-mode `backwards` only, so no transform lingers on the content). */
+.step-runner {
+  left: -45%;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, theme('colors.brand.DEFAULT') 70%, rgb(255 255 255 / 0.9));
+  animation: step-run 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+/* Reaching a step: the number squishes in like jelly, confetti bursts out of the circle,
+   and a cheer bubble pops up under it, floats a moment, then fades. */
+.step-jelly {
+  display: inline-block;
+  animation: step-jelly 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s backwards;
+}
+.step-confetti {
+  opacity: 0;
+  animation: step-confetti 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.35s;
+}
+.step-cheer {
+  opacity: 0;
+  animation: step-cheer 2.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s;
+}
+.step-enter-forward {
+  animation: step-enter-forward 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.step-enter-back {
+  animation: step-enter-back 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes step-run {
+  to { left: 100%; }
+}
+@keyframes step-jelly {
+  0%   { transform: scale(0.2); }
+  40%  { transform: scale(1.35, 0.75); }
+  60%  { transform: scale(0.85, 1.2); }
+  80%  { transform: scale(1.08, 0.95); }
+  100% { transform: scale(1); }
+}
+@keyframes step-confetti {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(200deg); }
+}
+@keyframes step-cheer {
+  0%   { opacity: 0; transform: translate(-50%, 6px) scale(0.6) rotate(-6deg); }
+  15%  { opacity: 1; transform: translate(-50%, 0) scale(1.05) rotate(2deg); }
+  25%  { transform: translate(-50%, 0) scale(1) rotate(0deg); }
+  80%  { opacity: 1; transform: translate(-50%, -2px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -8px) scale(0.95); }
+}
+@keyframes step-enter-forward {
+  from { opacity: 0; transform: translateX(28px); }
+}
+@keyframes step-enter-back {
+  from { opacity: 0; transform: translateX(-28px); }
+}
+
+@keyframes stat-flip-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) translateY(28px) rotateX(-32deg) scale(0.96);
+  }
+}
+@keyframes stat-bar-grow {
+  from { transform: scaleY(0); }
+}
+@keyframes stat-seg-grow {
+  from { transform: scaleX(0); }
+}
+@keyframes stat-glow-breathe {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat-bar,
+  .stat-seg,
+  .stat-glow,
+  .stat-3d {
+    animation: none;
+  }
+  .step-runner,
+  .step-jelly,
+  .step-confetti,
+  .step-cheer,
+  .step-enter-forward,
+  .step-enter-back,
+  .explainer-icon svg,
+  .explainer-icon svg > *,
+  .trend-arrow-line,
+  .trend-arrow-area,
+  .trend-arrow-head {
+    animation: none;
+  }
+  .stat-3d {
+    transform: none;
+  }
+}
+
+/* Glass search pill: a light sheen sweeps across every few seconds. */
+.search-sheen {
+  transform: translateX(-120%) skewX(-18deg);
+  animation: search-sheen 6s cubic-bezier(0.4, 0, 0.2, 1) 1.5s infinite;
+}
+@keyframes search-sheen {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  28%, 100% { transform: translateX(520%) skewX(-18deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-sheen { animation: none; opacity: 0; }
+}
+
+/* Creator profile: the Brand Fit ring sweeps in from empty (264 ≈ the ring's circumference). */
+.profile-fit-ring {
+  animation: profile-fit-sweep 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.35s backwards;
+}
+@keyframes profile-fit-sweep {
+  from { stroke-dashoffset: 264; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-fit-ring { animation: none; }
+}
+
+/* Discover search box: a light sweeps across the field when it gains focus. */
+@keyframes search-sweep {
+  0% { transform: translateX(0) skewX(-12deg); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateX(400%) skewX(-12deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .group\/search span[aria-hidden] { animation: none !important; }
+}
