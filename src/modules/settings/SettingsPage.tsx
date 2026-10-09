@@ -1,5 +1,5 @@
 import { PageHeader } from '@/shared/components/PageHeader';
-import { Save, User, Lock, Loader2, CreditCard, Receipt } from 'lucide-react';
+import { Save, User, Lock, Loader2, CreditCard, Receipt, Mail, Phone, KeyRound, ShieldCheck, AlertCircle, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -18,12 +18,35 @@ const BASE_TABS = [
 const TRANSACTIONS_TAB = { key: 'transactions', label: 'Transactions', icon: Receipt };
 const SUBSCRIPTION_TAB = { key: 'subscription', label: 'Subscription', icon: CreditCard };
 
+// Shared surface + field styles for every Settings section.
+// While a field inside is focused, the card gets a soft yellow outline and lifts slightly.
+const SECTION_CARD = 'animate-fade-up overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-foreground/[0.07] transition-all duration-300 focus-within:-translate-y-0.5 focus-within:shadow-float focus-within:ring-2 focus-within:ring-brand/60';
+const FIELD_INPUT = 'h-11 w-full rounded-xl border border-transparent bg-secondary/60 px-4 text-sm transition-colors placeholder:text-muted-foreground/60 hover:bg-secondary focus:border-foreground/15 focus:bg-card focus:outline-none focus:ring-4 focus:ring-brand/20';
+const FIELD_LABEL = 'mb-2 block text-[13px] font-semibold';
+const FIELD_HINT = 'mt-1.5 text-xs text-muted-foreground';
+const PRIMARY_BUTTON = 'flood-btn group/save flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground pl-1.5 pr-5 text-sm font-semibold text-background duration-300 hover:shadow-float disabled:pointer-events-none disabled:opacity-50 sm:w-auto';
+
 interface DecodedToken {
     email: string;
     name: string;
     role: string;
     userId: string;
     [key: string]: any;
+}
+
+/** Icon tile + title + description used at the top of each Settings section card. */
+function SectionHeader({ icon: Icon, title, description }: { icon: React.ComponentType<{ className?: string }>; title: string; description: string }) {
+    return (
+        <div className="flex items-center gap-3 border-b border-foreground/[0.06] px-6 py-5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground">
+                <Icon className="h-[18px] w-[18px]" />
+            </span>
+            <div className="min-w-0">
+                <h3 className="font-display text-base font-bold tracking-tight">{title}</h3>
+                <p className="text-[13px] text-muted-foreground">{description}</p>
+            </div>
+        </div>
+    );
 }
 
 // ─── Subscription Tab ─────────────────────────────────────────────────────────
@@ -63,40 +86,46 @@ function SubscriptionTab() {
     const isCancelScheduled = !!subscription?.cancelledAt && subscription.status === 'active' && subscription.plan !== 'free';
 
     return (
-        <div className="space-y-5">
-            <div className="bg-card border border-border rounded-2xl p-6">
-                <h3 className="text-base font-semibold font-display mb-4">Current Plan</h3>
+        <section className={SECTION_CARD}>
+            <SectionHeader icon={CreditCard} title="Current Plan" description="Your plan and billing period." />
 
+            <div className="px-6 py-6">
                 {isLoading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Loading subscription…
                     </div>
                 ) : subscription ? (
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-2xl font-bold font-display">{planLabel}</p>
-                                {periodEnd && subscription.plan !== 'free' && (
-                                    <p className={cn('text-sm mt-0.5', isExpiringSoon && !isCancelScheduled ? 'text-orange-600 font-medium' : 'text-muted-foreground')}>
-                                        {isCancelScheduled
-                                            ? `Cancels on ${periodEnd} — full access until then`
-                                            : isExpiringSoon
-                                                ? `⚠ Expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} — renew to avoid interruption`
-                                                : `Active until ${periodEnd}`}
-                                    </p>
-                                )}
-                                {subscription.plan === 'free' && (
-                                    <p className="text-sm text-muted-foreground mt-0.5">No billing — free forever</p>
-                                )}
+                        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-secondary/50 p-5">
+                            <div className="flex items-center gap-4">
+                                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-black">
+                                    <CreditCard className="h-5 w-5" />
+                                </span>
+                                <div>
+                                    <p className="font-display text-2xl font-bold tracking-tight">{planLabel}</p>
+                                    {periodEnd && subscription.plan !== 'free' && (
+                                        <p className={cn('mt-0.5 flex items-center gap-1.5 text-sm', isExpiringSoon && !isCancelScheduled ? 'font-medium text-orange-600' : 'text-muted-foreground')}>
+                                            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                                            {isCancelScheduled
+                                                ? `Cancels on ${periodEnd} — full access until then`
+                                                : isExpiringSoon
+                                                    ? `⚠ Expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} — renew to avoid interruption`
+                                                    : `Active until ${periodEnd}`}
+                                        </p>
+                                    )}
+                                    {subscription.plan === 'free' && (
+                                        <p className="mt-0.5 text-sm text-muted-foreground">No billing — free forever</p>
+                                    )}
+                                </div>
                             </div>
-                            <span className={cn('text-xs px-2.5 py-1 rounded-full font-medium capitalize', isCancelScheduled ? 'bg-muted text-muted-foreground' : statusColor)}>
+                            <span className={cn('rounded-full px-3 py-1 text-xs font-semibold capitalize', isCancelScheduled ? 'bg-muted text-muted-foreground' : statusColor)}>
                                 {isCancelScheduled ? 'Cancelling' : subscription.status.replace('_', ' ')}
                             </span>
                         </div>
 
                         {subscription.pendingPlan && (
-                            <p className="text-xs text-muted-foreground border border-border rounded-lg px-3 py-2">
+                            <p className="rounded-xl border-l-[3px] border-brand bg-brand/10 px-4 py-3 text-xs text-foreground/80">
                                 ⏳ Payment in progress for <strong className="capitalize">{PLAN_LABELS[subscription.pendingPlan] ?? subscription.pendingPlan}</strong> plan.
                                 Complete the checkout to activate it.
                             </p>
@@ -105,18 +134,17 @@ function SubscriptionTab() {
                 ) : (
                     <p className="text-sm text-muted-foreground">No subscription data found.</p>
                 )}
-
-                <div className="mt-5 pt-4 border-t border-border">
-                    <Link
-                        to="/subscription"
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-premium"
-                    >
-                        <CreditCard className="w-4 h-4" />
-                        {subscription?.plan === 'free' ? 'Upgrade Plan' : 'Manage Subscription'}
-                    </Link>
-                </div>
             </div>
-        </div>
+
+            <div className="flex justify-end border-t border-foreground/[0.06] bg-secondary/30 px-6 py-4">
+                <Link to="/subscription" className={PRIMARY_BUTTON}>
+                    <span className="flood-btn-icon grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
+                        <CreditCard className="h-4 w-4" />
+                    </span>
+                    <span className="flood-btn-label">{subscription?.plan === 'free' ? 'Upgrade Plan' : 'Manage Subscription'}</span>
+                </Link>
+            </div>
+        </section>
     );
 }
 
@@ -214,113 +242,169 @@ export default function SettingsPage() {
         });
     };
 
+    // Initials for the profile avatar (first letters of the first two words of the name).
+    const initials = (userDetails.name || userDetails.email || '?')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join('');
+
     return (
-        <div className="w-full animate-fade-in">
-            <PageHeader title="Settings" description="Manage your account preferences" infoTooltip="Manage your account, profile, and preferences." />
+        <div className="w-full animate-fade-in pb-10">
+            <PageHeader title="Settings" description="Manage your account preferences" infoTooltip="Manage your account, profile, and preferences." animated size="lg" />
 
             {/* Tabs */}
-            <div className="flex gap-1 mb-6 border-b border-border">
-                {TABS.map((t) => (
-                    <button
-                        key={t.key}
-                        onClick={() => setTab(t.key)}
-                        className={cn('flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-premium relative', tab === t.key ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}
-                    >
-                        <t.icon className="w-4 h-4" />
-                        {t.label}
-                        {tab === t.key && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#fedc03]" />}
-                    </button>
-                ))}
+            <div className="mb-6 overflow-x-auto scrollbar-hide">
+                <div className="inline-flex gap-1 rounded-full bg-secondary p-1">
+                    {TABS.map((t) => (
+                        <button
+                            key={t.key}
+                            type="button"
+                            onClick={() => setTab(t.key)}
+                            className={cn(
+                                'flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200',
+                                tab === t.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            <t.icon className={cn('h-4 w-4', tab === t.key && 'text-foreground')} />
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {tab === 'account' && (
-                <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
-                    <div>
-                        <label className="text-sm font-semibold mb-2 block">Full Name</label>
-                        <input
-                            type="text"
-                            value={userDetails.name}
-                            onChange={(e) => setUserDetails({ ...userDetails, name: sanitizeInput(e.target.value) })}
-                            className="w-full h-10 px-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
-                    </div>
-                    <div>
-                        <label className="text-sm font-semibold mb-2 block">Email Address</label>
-                        <input
-                            type="email"
-                            value={userDetails.email}
-                            disabled
-                            className="w-full h-10 px-4 rounded-lg border border-border bg-secondary/50 text-muted-foreground text-sm cursor-not-allowed"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Email address cannot be changed.</p>
-                    </div>
-                    <div>
-                        <label className="text-sm font-semibold mb-2 block">Phone</label>
-                        <input
-                            type="tel"
-                            value={userDetails.phoneNumber}
-                            maxLength={10}
-                            placeholder="10-digit mobile number"
-                            onChange={(e) => {
-                                const numericValue = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
-                                setUserDetails({ ...userDetails, phoneNumber: numericValue });
-                            }}
-                            className="w-full h-10 px-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Enter 10-digit mobile number without country code.</p>
-                    </div>
-                    <div className="pt-2">
-                        <button
-                            onClick={handleSaveProfile}
-                            disabled={isUpdating}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-premium disabled:opacity-50"
-                        >
-                            {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            {isUpdating ? 'Saving...' : 'Save Changes'}
-                        </button>
-                    </div>
+                <div className="space-y-5">
+                    {/* Profile summary */}
+                    <section className={cn(SECTION_CARD, 'relative flex items-center gap-4 p-6')}>
+                        <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand/20 blur-3xl" />
+                        <span className="relative grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand font-display text-xl font-bold text-black">
+                            {initials}
+                        </span>
+                        <div className="relative min-w-0">
+                            <p className="truncate font-display text-xl font-bold tracking-tight">{userDetails.name || '—'}</p>
+                            <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-muted-foreground">
+                                <Mail className="h-3.5 w-3.5 shrink-0" />
+                                {userDetails.email}
+                            </p>
+                        </div>
+                    </section>
+
+                    {/* Personal details form */}
+                    <section className={cn(SECTION_CARD, '[animation-delay:80ms]')}>
+                        <SectionHeader icon={User} title="Personal details" description="Update your name and contact number." />
+                        <div className="grid grid-cols-1 gap-5 px-6 py-6 md:grid-cols-2">
+                            <div>
+                                <label className={FIELD_LABEL}>Full Name</label>
+                                <input
+                                    type="text"
+                                    value={userDetails.name}
+                                    onChange={(e) => setUserDetails({ ...userDetails, name: sanitizeInput(e.target.value) })}
+                                    className={FIELD_INPUT}
+                                />
+                            </div>
+                            <div>
+                                <label className={FIELD_LABEL}>Phone</label>
+                                <div className="relative">
+                                    <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        type="tel"
+                                        value={userDetails.phoneNumber}
+                                        maxLength={10}
+                                        placeholder="10-digit mobile number"
+                                        onChange={(e) => {
+                                            const numericValue = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                                            setUserDetails({ ...userDetails, phoneNumber: numericValue });
+                                        }}
+                                        className={cn(FIELD_INPUT, 'pl-11 tabular-nums')}
+                                    />
+                                </div>
+                                <p className={FIELD_HINT}>Enter 10-digit mobile number without country code.</p>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className={FIELD_LABEL}>Email Address</label>
+                                <div className="relative">
+                                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        type="email"
+                                        value={userDetails.email}
+                                        disabled
+                                        className="h-11 w-full cursor-not-allowed rounded-xl border border-dashed border-foreground/10 bg-secondary/30 pl-11 pr-11 text-sm text-muted-foreground"
+                                    />
+                                    <Lock className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
+                                </div>
+                                <p className={FIELD_HINT}>Email address cannot be changed.</p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end border-t border-foreground/[0.06] bg-secondary/30 px-6 py-4">
+                            <button type="button" onClick={handleSaveProfile} disabled={isUpdating} className={PRIMARY_BUTTON}>
+                                <span className="flood-btn-icon grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
+                                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                </span>
+                                <span className="flood-btn-label">{isUpdating ? 'Saving...' : 'Save Changes'}</span>
+                            </button>
+                        </div>
+                    </section>
                 </div>
             )}
 
             {tab === 'security' && (
-                <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
-                    <div>
-                        <label className="text-sm font-semibold mb-2 block">Current Password</label>
-                        <input
-                            type="password"
-                            value={passwords.current}
-                            onChange={(e) => setPasswords({ ...passwords, current: sanitizeInput(e.target.value) })}
-                            className="w-full h-10 px-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
+                <section className={SECTION_CARD}>
+                    <SectionHeader icon={ShieldCheck} title="Change password" description="Use a strong password you don't use anywhere else." />
+                    <div className="grid grid-cols-1 gap-5 px-6 py-6 md:grid-cols-2">
+                        <div className="md:col-span-2 md:max-w-[calc(50%-10px)]">
+                            <label className={FIELD_LABEL}>Current Password</label>
+                            <div className="relative">
+                                <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <input
+                                    type="password"
+                                    value={passwords.current}
+                                    onChange={(e) => setPasswords({ ...passwords, current: sanitizeInput(e.target.value) })}
+                                    className={cn(FIELD_INPUT, 'pl-11')}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className={FIELD_LABEL}>New Password</label>
+                            <div className="relative">
+                                <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <input
+                                    type="password"
+                                    value={passwords.next}
+                                    onChange={(e) => setPasswords({ ...passwords, next: sanitizeInput(e.target.value) })}
+                                    className={cn(FIELD_INPUT, 'pl-11')}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className={FIELD_LABEL}>Confirm Password</label>
+                            <div className="relative">
+                                <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <input
+                                    type="password"
+                                    value={passwords.confirm}
+                                    onChange={(e) => setPasswords({ ...passwords, confirm: sanitizeInput(e.target.value) })}
+                                    className={cn(FIELD_INPUT, 'pl-11')}
+                                />
+                            </div>
+                        </div>
+                        {passwordError && (
+                            <p className="flex items-start gap-2 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive md:col-span-2">
+                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                                {passwordError}
+                            </p>
+                        )}
                     </div>
-                    <div>
-                        <label className="text-sm font-semibold mb-2 block">New Password</label>
-                        <input
-                            type="password"
-                            value={passwords.next}
-                            onChange={(e) => setPasswords({ ...passwords, next: sanitizeInput(e.target.value) })}
-                            className="w-full h-10 px-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
+                    <div className="flex justify-end border-t border-foreground/[0.06] bg-secondary/30 px-6 py-4">
+                        <button type="button" onClick={handleChangePassword} disabled={isChangingPassword} className={PRIMARY_BUTTON}>
+                            <span className="flood-btn-icon grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
+                                {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                            </span>
+                            <span className="flood-btn-label">{isChangingPassword ? 'Updating...' : 'Update Password'}</span>
+                        </button>
                     </div>
-                    <div>
-                        <label className="text-sm font-semibold mb-2 block">Confirm Password</label>
-                        <input
-                            type="password"
-                            value={passwords.confirm}
-                            onChange={(e) => setPasswords({ ...passwords, confirm: sanitizeInput(e.target.value) })}
-                            className="w-full h-10 px-4 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
-                    </div>
-                    {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
-                    <button
-                        onClick={handleChangePassword}
-                        disabled={isChangingPassword}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-premium disabled:opacity-50"
-                    >
-                        {isChangingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                        {isChangingPassword ? 'Updating...' : 'Update Password'}
-                    </button>
-                </div>
+                </section>
             )}
 
             {tab === 'transactions' && isBrandOrAgent && <TransactionsPanel />}

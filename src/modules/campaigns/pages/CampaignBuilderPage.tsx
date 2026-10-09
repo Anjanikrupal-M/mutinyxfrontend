@@ -136,7 +136,6 @@ const STEP_CONFETTI = [
     '[--dx:-21px] [--dy:-2px] bg-brand rounded-full',
     '[--dx:2px] [--dy:-21px] bg-foreground rounded-full',
 ];
-const STEP_CHEERS: Record<number, string> = { 2: 'Nice! 🔥', 3: 'Almost there ✨' };
 const MAX_COVER_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_COVER_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png']);
 const MAX_SCRIPT_FILE_SIZE_BYTES = 100 * 1024 * 1024;
@@ -2758,14 +2757,19 @@ export default function CampaignBuilderPage() {
                         return (
                             <li key={s.id} className={cn('flex items-center gap-2.5', i > 0 && 'flex-1')}>
                                 {i > 0 && (
-                                    <span className="relative h-0.5 min-w-3 flex-1 overflow-hidden rounded-full bg-border">
+                                    // Dotted path between steps (masked to dots in index.css): it fills in dark as
+                                    // steps are completed, and yellow light keeps flowing toward the next step.
+                                    <span className="step-dots relative min-w-3 flex-1 overflow-hidden bg-foreground/15">
                                         <span
                                             className={cn(
-                                                'block h-full rounded-full bg-foreground transition-[width] duration-500 ease-out',
+                                                'block h-full bg-foreground transition-[width] duration-700 ease-out',
                                                 s.id <= step ? 'w-full' : 'w-0',
                                             )}
                                         />
-                                        {/* Moving forward: a yellow streak races along the line into the new step */}
+                                        {s.id === step + 1 && (
+                                            <span aria-hidden className="step-flow pointer-events-none absolute inset-y-0" />
+                                        )}
+                                        {/* Moving forward: a yellow streak races along the dots into the new step */}
                                         {current && stepDirectionRef.current === 'forward' && (
                                             <span key={`run-${step}`} aria-hidden className="step-runner pointer-events-none absolute inset-y-0" />
                                         )}
@@ -2798,11 +2802,6 @@ export default function CampaignBuilderPage() {
                                                 {STEP_CONFETTI.map((bit, i) => (
                                                     <span key={i} className={cn('step-confetti absolute left-1/2 top-1/2 h-[5px] w-[5px]', bit)} />
                                                 ))}
-                                                {STEP_CHEERS[step] && (
-                                                    <span className="step-cheer absolute left-1/2 top-full z-10 mt-2 whitespace-nowrap rounded-full bg-foreground px-2.5 py-1 text-[11px] font-bold text-background shadow-float">
-                                                        {STEP_CHEERS[step]}
-                                                    </span>
-                                                )}
                                             </span>
                                         )}
                                     </span>

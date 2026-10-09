@@ -249,12 +249,12 @@ function CampaignListPageContent() {
                 <button
                     type="button"
                     onClick={() => navigate('/campaigns/create?fresh=true')}
-                    className="group/create flex h-10 animate-fade-up items-center gap-2 rounded-full bg-foreground pl-1.5 pr-4 text-sm font-semibold text-background shadow-card transition-all duration-300 [animation-delay:200ms] hover:shadow-float"
+                    className="flood-btn group/create flex h-10 animate-fade-up items-center gap-2 rounded-full bg-foreground pl-1.5 pr-4 text-sm font-semibold text-background shadow-card duration-300 [animation-delay:200ms] hover:shadow-float"
                 >
-                    <span className="grid h-7 w-7 place-items-center rounded-full bg-brand text-black transition-transform duration-300 group-hover/create:rotate-90">
-                        <Plus className="h-4 w-4" />
+                    <span className="flood-btn-icon grid h-7 w-7 place-items-center rounded-full bg-brand text-black">
+                        <Plus className="h-4 w-4 transition-transform duration-300 group-hover/create:rotate-90" />
                     </span>
-                    Create campaign
+                    <span className="flood-btn-label">Create campaign</span>
                 </button>
             </div>
 

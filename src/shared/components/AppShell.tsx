@@ -35,10 +35,12 @@ export function AppShell() {
         // (Topbar, the campaign builder's stepper and live preview) silently stopped sticking.
         <div className="relative min-h-screen w-full flex flex-col bg-background overflow-x-clip">
             {/* Sidebar: hidden on mobile, visible on md+ */}
+            {/* White backing behind the floating rail so its gutter matches the white Topbar */}
+            <div className="hidden md:block fixed left-0 top-0 z-[99] h-screen w-[80px] bg-white" />
             <Sidebar />
 
             {/* Main content: desktop uses fixed sidebar offset (mini-width) */}
-            <div className="md:pl-[68px]">
+            <div className="md:pl-[80px]">
                 <Topbar />
                 {/* Bottom padding must clear the fixed overlays at full scroll:
                     mobile = BottomTabBar (64px) + ScrollToTop above it (ends ~136px);

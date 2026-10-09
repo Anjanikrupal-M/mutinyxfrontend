@@ -539,12 +539,12 @@ export default function ProgramsListPage() {
                         id="create-program-btn"
                         type="button"
                         onClick={openCreate}
-                        className="group/create flex h-10 items-center gap-2 rounded-full bg-foreground pl-1.5 pr-4 text-sm font-semibold text-background shadow-card transition-all duration-300 hover:shadow-float"
+                        className="flood-btn group/create flex h-10 items-center gap-2 rounded-full bg-foreground pl-1.5 pr-4 text-sm font-semibold text-background shadow-card duration-300 hover:shadow-float"
                     >
-                        <span className="grid h-7 w-7 place-items-center rounded-full bg-brand text-black transition-transform duration-300 group-hover/create:rotate-90">
-                            <Plus className="h-4 w-4" />
+                        <span className="flood-btn-icon grid h-7 w-7 place-items-center rounded-full bg-brand text-black">
+                            <Plus className="h-4 w-4 transition-transform duration-300 group-hover/create:rotate-90" />
                         </span>
-                        New program
+                        <span className="flood-btn-label">New program</span>
                     </button>
                 </div>
             </div>
@@ -554,9 +554,9 @@ export default function ProgramsListPage() {
                 description="A Program is an always-open campaign. Once enrollment is on, influencers can apply any day — new applications keep coming in. You review them at your own pace, then pick whichever ones you like and group them together to start a new campaign."
                 dismissKey="mutiny:explainer:programs"
                 steps={[
-                    { icon: ToggleRight, title: '1. Open enrollment', description: 'Turn enrollment on so influencers can discover and apply.' },
-                    { icon: Inbox, title: '2. Daily applications', description: 'New enrollments arrive continuously — no fixed deadline.' },
-                    { icon: Layers, title: '3. Group into a campaign', description: 'Pick the enrollments you want and start a campaign with them.' },
+                    { icon: ToggleRight, title: '1. Open enrollment', description: 'Turn enrollment on so influencers can discover and apply.', motion: 'toggle' },
+                    { icon: Inbox, title: '2. Daily applications', description: 'New enrollments arrive continuously — no fixed deadline.', motion: 'inbox' },
+                    { icon: Layers, title: '3. Group into a campaign', description: 'Pick the enrollments you want and start a campaign with them.', motion: 'stack' },
                 ]}
             />
 

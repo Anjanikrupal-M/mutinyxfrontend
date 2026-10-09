@@ -24,7 +24,7 @@ const cardDelay = (i: number) => CARD_DELAYS[Math.min(i, CARD_DELAYS.length - 1)
 // Circumference of the hero's active-share ring (r = 23).
 const RING_LENGTH = 2 * Math.PI * 23;
 
-const primaryButton = 'group flex h-10 items-center gap-2 rounded-xl border border-foreground bg-foreground px-3 text-[13px] font-semibold text-background shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97] sm:pl-2.5 sm:pr-4';
+const primaryButton = 'flood-btn group flex h-10 items-center gap-2 rounded-xl border border-foreground bg-foreground px-3 text-[13px] font-semibold text-background shadow-sm duration-300 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97] sm:pl-2.5 sm:pr-4';
 const secondaryButton = 'h-10 gap-2 rounded-xl border-border bg-card px-3 text-[13px] font-semibold text-foreground shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-foreground hover:bg-card hover:text-foreground hover:shadow-float active:translate-y-0 active:scale-[0.97] sm:px-4';
 
 export default function TeamsPage() {
@@ -100,14 +100,14 @@ export default function TeamsPage() {
                     <>
                         <HireManagerButton className={secondaryButton} />
                         <button type="button" onClick={openCreate} className={primaryButton}>
-                            <span className="grid h-5 w-5 place-items-center rounded-md bg-brand text-foreground">
+                            <span className="flood-btn-icon grid h-5 w-5 place-items-center rounded-md bg-brand text-foreground">
                                 {isFreePlan ? (
                                     <Sparkles className="h-3 w-3" />
                                 ) : (
                                     <Plus className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-90" />
                                 )}
                             </span>
-                            <span className="hidden sm:inline">{isFreePlan ? 'Upgrade to invite' : 'Invite member'}</span>
+                            <span className="flood-btn-label hidden sm:inline">{isFreePlan ? 'Upgrade to invite' : 'Invite member'}</span>
                         </button>
                     </>
                 }
@@ -249,24 +249,28 @@ export default function TeamsPage() {
                         ))}
                     </div>
 
-                    <div className="relative sm:w-72">
-                        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <input
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Search name or email"
-                            className={cn(fieldClass, 'h-10 rounded-full border-border pl-10 pr-9 shadow-card')}
-                        />
-                        {query && (
-                            <button
-                                type="button"
-                                onClick={() => setQuery('')}
-                                aria-label="Clear search"
-                                className="absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
-                            >
-                                <X className="h-3.5 w-3.5" />
-                            </button>
-                        )}
+                    {/* Glass search pill (same as the Campaigns page): frosted fill with a bright top edge
+                        and a sheen that sweeps across every few seconds. On focus a soft yellow aura glows
+                        behind it, it widens a little and the icon tilts. */}
+                    <div className="group/search relative w-full min-w-0 transition-[width] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] sm:w-80 lg:focus-within:w-[380px]">
+                        <span aria-hidden className="pointer-events-none absolute -inset-2 rounded-full bg-[radial-gradient(55%_120%_at_25%_50%,rgb(250_203_3_/_0.5),transparent_70%)] opacity-0 blur-lg transition-opacity duration-500 group-focus-within/search:opacity-100" />
+                        <label className="relative flex h-11 items-center gap-2.5 overflow-hidden rounded-full border border-white/80 bg-gradient-to-b from-white/90 to-white/55 px-4 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.95),inset_0_-1px_0_rgb(0_0_0_/_0.04),0_1px_2px_rgb(0_0_0_/_0.04),0_10px_28px_-14px_rgb(0_0_0_/_0.22)] ring-1 ring-black/[0.06] backdrop-blur-xl transition-all duration-300 hover:ring-black/10 group-focus-within/search:from-white group-focus-within/search:to-white/80 group-focus-within/search:ring-black/15">
+                            <span aria-hidden className="search-sheen pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
+                            <Search className="relative h-4 w-4 shrink-0 text-muted-foreground transition-all duration-300 group-focus-within/search:-rotate-12 group-focus-within/search:scale-110 group-focus-within/search:text-foreground" />
+                            <input
+                                type="text"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Search name or email"
+                                aria-label="Search team members by name or email"
+                                className="relative h-full w-full bg-transparent text-sm placeholder:text-muted-foreground/75 focus:outline-none focus-visible:shadow-none"
+                            />
+                            {query && (
+                                <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="relative grid h-6 w-6 shrink-0 animate-pop place-items-center rounded-full bg-foreground text-background transition-transform hover:scale-110">
+                                    <X className="h-3 w-3" />
+                                </button>
+                            )}
+                        </label>
                     </div>
                 </div>
             )}

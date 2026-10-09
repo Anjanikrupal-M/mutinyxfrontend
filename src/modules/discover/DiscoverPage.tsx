@@ -617,10 +617,12 @@ export default function DiscoverPage({ savedOnly = false }: DiscoverPageProps) {
                     {!campaignId && (
                         <Link
                             to="/discover/compare"
-                            className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium shadow-sm transition-colors hover:border-foreground"
+                            className="flood-btn flood-btn-dark flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium shadow-sm duration-300 hover:border-foreground"
                         >
-                            <GitCompareArrows className="h-4 w-4" />
-                            <span>Compare{compareCreators.length > 0 ? ` (${compareCreators.length}/${MAX_COMPARE})` : ''}</span>
+                            <span className="flood-btn-icon flood-btn-grow grid place-items-center">
+                                <GitCompareArrows className="h-4 w-4" />
+                            </span>
+                            <span className="flood-btn-label">Compare{compareCreators.length > 0 ? ` (${compareCreators.length}/${MAX_COMPARE})` : ''}</span>
                         </Link>
                     )}
                     {savedOnly ? (
@@ -634,10 +636,12 @@ export default function DiscoverPage({ savedOnly = false }: DiscoverPageProps) {
                     ) : (!campaignId && user?.role !== 'agent') ? (
                         <Link
                             to="/saved-creators"
-                            className="flex h-10 items-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+                            className="flood-btn flex h-10 items-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-background duration-300"
                         >
-                            <Bookmark className="h-4 w-4" />
-                            <span>Saved</span>
+                            <span className="flood-btn-icon flood-btn-grow grid place-items-center">
+                                <Bookmark className="h-4 w-4" />
+                            </span>
+                            <span className="flood-btn-label">Saved</span>
                         </Link>
                     ) : null}
                 </div>

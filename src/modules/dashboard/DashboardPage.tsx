@@ -524,10 +524,12 @@ function DashboardPageContent() {
                     <button
                         type="button"
                         onClick={() => navigate('/campaigns/create?fresh=true')}
-                        className="group flex h-9 items-center gap-2 rounded-full border border-foreground bg-foreground px-4 text-[13px] font-semibold text-background shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97]"
+                        className="flood-btn group flex h-9 items-center gap-2 rounded-full border border-foreground bg-foreground pl-1 pr-1 text-[13px] sm:pr-4 font-semibold text-background shadow-sm duration-300 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97]"
                     >
-                        <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-                        <span className="hidden sm:inline">Create campaign</span>
+                        <span className="flood-btn-icon grid h-7 w-7 place-items-center rounded-full bg-brand text-black">
+                            <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
+                        </span>
+                        <span className="flood-btn-label hidden sm:inline">Create campaign</span>
                     </button>
                 </div>
             </div>

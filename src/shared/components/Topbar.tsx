@@ -341,7 +341,7 @@ export function Topbar({ variant = 'default' }: TopbarProps) {
                 <Link
                     to="/notifications"
                     aria-label="Notifications"
-                    className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border bg-card shadow-sm transition-colors hover:border-foreground"
+                    className="bell-btn relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border bg-card shadow-sm transition-all duration-300 hover:border-foreground"
                 >
                     <Bell className="h-[17px] w-[17px] stroke-[1.75]" />
                     {unreadCount > 0 && (
@@ -416,7 +416,7 @@ export function Topbar({ variant = 'default' }: TopbarProps) {
                 {/* Notification bell */}
                 <Link
                     to="/notifications"
-                    className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    className="bell-btn relative p-2 rounded-lg text-muted-foreground transition-all duration-300 hover:text-foreground hover:bg-secondary/60"
                 >
                     <Bell className="w-[18px] h-[18px]" />
                     {unreadCount > 0 && (

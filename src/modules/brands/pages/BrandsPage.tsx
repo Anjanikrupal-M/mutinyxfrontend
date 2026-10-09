@@ -28,7 +28,7 @@ const CARD_DELAYS = ['[animation-delay:0ms]', '[animation-delay:60ms]', '[animat
 const cardDelay = (i: number) => CARD_DELAYS[Math.min(i, CARD_DELAYS.length - 1)];
 
 // One button system for the page: a black pill for the single primary action, soft pills everywhere else.
-const primaryButton = 'group flex h-10 items-center gap-2 rounded-full bg-foreground pl-2 pr-2 text-[13px] font-semibold text-background shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97] sm:pr-4';
+const primaryButton = 'flood-btn group flex h-10 items-center gap-2 rounded-full bg-foreground pl-2 pr-2 text-[13px] font-semibold text-background shadow-sm duration-300 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97] sm:pr-4';
 const softPill = 'flex h-8 items-center gap-1.5 rounded-full border border-foreground/10 bg-card px-3 text-[11px] font-semibold text-foreground shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-transparent hover:bg-brand active:translate-y-0 active:scale-[0.97] disabled:opacity-60';
 const statTile = 'group flex animate-fade-up flex-col justify-between gap-5 rounded-3xl p-5 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-float';
 
@@ -203,10 +203,10 @@ export default function BrandsPage() {
                 infoTooltip="Every client brand under your Agencies account — switch between them or open one to manage it. See the card below for how brands work."
                 actions={
                     <button type="button" onClick={() => navigate('/brands/new')} className={primaryButton}>
-                        <span className="grid h-6 w-6 place-items-center rounded-full bg-brand text-foreground">
+                        <span className="flood-btn-icon grid h-6 w-6 place-items-center rounded-full bg-brand text-foreground">
                             <Plus className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-90" />
                         </span>
-                        <span className="hidden sm:inline">Add new brand</span>
+                        <span className="flood-btn-label hidden sm:inline">Add new brand</span>
                     </button>
                 }
             />
@@ -630,9 +630,9 @@ export default function BrandsPage() {
                                                         onError: () => toast.error('Failed to reactivate this brand. Please try again.'),
                                                     })
                                                 }
-                                                className={cn(softPill, 'shrink-0 border-transparent bg-brand/20 hover:bg-brand')}
+                                                className={cn(softPill, 'restore-btn shrink-0 border-transparent bg-brand/20 hover:bg-brand')}
                                             >
-                                                {isThisOneReactivating ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArchiveRestore className="h-3 w-3" />}
+                                                {isThisOneReactivating ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArchiveRestore className="restore-icon h-3 w-3 overflow-visible" />}
                                                 Reactivate
                                             </button>
                                         </div>

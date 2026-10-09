@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 import { http } from '@/core/http';
 import { API } from '@/core/api';
 import { getSupportInfo } from './api';
-import { Mail, MessageSquare, Phone, LifeBuoy, HelpCircle, Loader2, Clock, CheckCircle2, XCircle, PhoneCall, Crown, LockKeyhole, Sparkles } from 'lucide-react';
+import { Mail, MessageSquare, Phone, LifeBuoy, HelpCircle, Loader2, Clock, CheckCircle2, XCircle, PhoneCall, Crown, LockKeyhole, Sparkles, ArrowUpRight, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/shared/stores/authStore';
+import { PageHeader } from '@/shared/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -138,175 +139,227 @@ export default function SupportPage() {
         window.scrollTo(0, 0);
     }, []);
 
+    // Contact channels shown as the row of tiles at the top of the Contact tab.
+    const supportEmail = supportInfo?.email || 'connect@mutinytalent.com';
+    const supportPhone = supportInfo?.phone || '+91 79958 96438';
+    const contactMethods = [
+        { icon: Mail, label: 'Email', value: supportEmail, href: `mailto:${supportEmail}` },
+        { icon: Phone, label: 'Phone', value: supportPhone, href: `tel:${supportPhone.replace(/\s+/g, '')}` },
+        { icon: MessageSquare, label: 'Live Chat', value: '9 AM - 5 PM EST', href: undefined },
+    ];
+
     return (
-        <div className="w-full h-full p-6 lg:p-10 w-full space-y-8 animate-in fade-in zoom-in-95 duration-300">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Support Center</h1>
-                <p className="text-muted-foreground">We're here to help. Contact us or browse the FAQs below.</p>
-            </div>
+        <div className="w-full animate-fade-in pb-10">
+            <PageHeader
+                title="Support Center"
+                description="We're here to help. Contact us or browse the FAQs below."
+                animated
+                size="lg"
+                hideHireManager
+            />
 
             <Tabs defaultValue="contact" className="w-full">
-                <TabsList className="mb-6">
-                    <TabsTrigger value="contact">Contact & FAQs</TabsTrigger>
-                    <TabsTrigger value="history">Ticket History</TabsTrigger>
+                <TabsList className="mb-6 h-11 rounded-full bg-secondary p-1">
+                    <TabsTrigger value="contact" className="rounded-full px-4 text-[13px] font-semibold data-[state=active]:shadow-sm">
+                        Contact & FAQs
+                    </TabsTrigger>
+                    <TabsTrigger value="history" className="rounded-full px-4 text-[13px] font-semibold data-[state=active]:shadow-sm">
+                        Ticket History
+                    </TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="contact">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {/* Contact Options */}
-                        <div className="md:col-span-1 space-y-4">
-                            <Card className="bg-card">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-lg">
-                                        <LifeBuoy className="h-5 w-5 text-yellow-600" />
-                                        Contact Us
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4 text-sm text-muted-foreground">
-                                    <div className="flex items-center gap-3">
-                                        <Mail className="h-4 w-4" />
-                                        <span>{supportInfo?.email || 'connect@mutinytalent.com'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <Phone className="h-4 w-4" />
-                                        <span>{supportInfo?.phone || '+91 79958 96438'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <MessageSquare className="h-4 w-4" />
-                                        <span>Live Chat (9 AM - 5 PM EST)</span>
-                                    </div>
-                                </CardContent>
-                            </Card>
 
-                            <Card className="bg-card">
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Send a Ticket</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Input 
-                                            placeholder="Subject" 
-                                            maxLength={200}
-                                            value={subject}
-                                            onChange={(e) => setSubject(sanitizeInput(e.target.value))}
-                                        />
-                                        <p className="text-xs text-muted-foreground text-right">{subject.length}/200</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Textarea 
-                                            placeholder="Describe your problem..." 
-                                            rows={4} 
-                                            maxLength={2000}
-                                            className="resize-none" 
-                                            value={message}
-                                            onChange={(e) => setMessage(sanitizeInput(e.target.value))}
-                                        />
-                                        <p className="text-xs text-muted-foreground text-right">{message.length}/2000</p>
-                                    </div>
-                                    <Button 
-                                        onClick={async () => {
-                                            handleSendTicket();
-                                            // Refetch history right after a short delay so the new ticket shows up if user switches tabs
-                                            setTimeout(() => refetchHistory(), 500);
-                                        }}
-                                        className="w-full font-semibold"
-                                        disabled={mutation.isPending || !subject.trim() || !message.trim()}
-                                    >
-                                        {mutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Ticket"}
-                                    </Button>
-                                </CardContent>
-                            </Card>
+                <TabsContent value="contact" className="mt-0 space-y-5">
+                    {/* ── Contact Us: one tile per channel ── */}
+                    <section className="animate-fade-up">
+                        <div className="mb-3 flex items-center gap-2">
+                            <LifeBuoy className="h-4 w-4 text-foreground/60" />
+                            <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Contact Us</h2>
                         </div>
-
-                        {/* FAQs */}
-                        <div className="md:col-span-2">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <HelpCircle className="h-5 w-5 text-yellow-600" />
-                                        Frequently Asked Questions
-                                    </CardTitle>
-                                    <CardDescription>Quick answers to common questions about MutinyX.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {faqsLoading ? (
-                                        <div className="space-y-3">
-                                            {Array.from({ length: 4 }).map((_, i) => (
-                                                <div key={i} className="space-y-2 py-3 border-b last:border-b-0">
-                                                    <Skeleton className="h-4 w-3/4" />
-                                                    <Skeleton className="h-3 w-full" />
-                                                    <Skeleton className="h-3 w-2/3" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : faqs.length === 0 ? (
-                                        <div className="text-center py-10 text-muted-foreground">
-                                            <HelpCircle className="w-10 h-10 mx-auto text-muted-foreground/20 mb-3" />
-                                            <p className="text-sm">No FAQs available at the moment.</p>
-                                        </div>
-                                    ) : (
-                                        <Accordion type="single" collapsible className="w-full">
-                                            {faqs.map((faq, i) => (
-                                                <AccordionItem key={faq.id ?? i} value={`item-${faq.id ?? i}`}>
-                                                    <AccordionTrigger className="text-left font-semibold">{faq.question}</AccordionTrigger>
-                                                    <AccordionContent className="text-muted-foreground leading-relaxed">
-                                                        {faq.answer}
-                                                    </AccordionContent>
-                                                </AccordionItem>
-                                            ))}
-                                        </Accordion>
-                                    )}
-                                </CardContent>
-                            </Card>
+                        <div className="grid grid-cols-1 divide-y divide-foreground/[0.07] overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-foreground/[0.07] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                            {contactMethods.map((method, i) => {
+                                const content = (
+                                    <>
+                                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground transition-colors duration-300 group-hover:bg-brand">
+                                            <method.icon className="h-[18px] w-[18px]" />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{method.label}</span>
+                                            <span className="mt-0.5 block truncate text-sm font-semibold">{method.value}</span>
+                                        </span>
+                                        {method.href && (
+                                            <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
+                                        )}
+                                    </>
+                                );
+                                const tileClass = cn(
+                                    'group flex animate-fade-up items-center gap-4 px-5 py-4 transition-colors duration-300',
+                                    method.href && 'hover:bg-secondary/60',
+                                    ['[animation-delay:60ms]', '[animation-delay:120ms]', '[animation-delay:180ms]'][i],
+                                );
+                                return method.href ? (
+                                    <a key={method.label} href={method.href} className={tileClass}>{content}</a>
+                                ) : (
+                                    <div key={method.label} className={tileClass}>{content}</div>
+                                );
+                            })}
                         </div>
-                    </div>
-                </TabsContent>
+                    </section>
 
-                <TabsContent value="history">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>My Tickets</CardTitle>
-                            <CardDescription>Track the status of your recent support queries.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {historyLoading ? (
-                                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-                            ) : tickets.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-                                    <p>You haven't submitted any tickets yet.</p>
+                    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
+                        {/* ── Send a Ticket: the highlighted primary action ── */}
+                        <section className="relative order-1 animate-fade-up overflow-hidden rounded-3xl bg-card p-6 shadow-float ring-2 ring-brand [animation-delay:200ms] lg:sticky lg:top-24 lg:order-2">
+                            <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand/25 blur-3xl" />
+                            <div className="relative mb-5 flex items-center gap-3">
+                                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-black">
+                                    <Send className="h-[18px] w-[18px]" />
+                                </span>
+                                <h2 className="font-display text-lg font-bold tracking-tight">Send a Ticket</h2>
+                            </div>
+                            <div className="relative space-y-4">
+                                <div className="space-y-1.5">
+                                    <Input
+                                        placeholder="Subject"
+                                        maxLength={200}
+                                        value={subject}
+                                        onChange={(e) => setSubject(sanitizeInput(e.target.value))}
+                                        className="h-11 rounded-xl bg-secondary/50 focus-visible:bg-card"
+                                    />
+                                    <p className="text-right text-[11px] tabular-nums text-muted-foreground">{subject.length}/200</p>
                                 </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {tickets.map((t: any) => (
-                                        <div key={t.id} className="border rounded-lg p-4 bg-card/50 flex flex-col gap-3 transition-colors hover:bg-card overflow-hidden">
-                                            <div className="flex justify-between items-start gap-4">
-                                                <h3 className="font-semibold text-base min-w-0 break-all">{t.subject}</h3>
-                                                <div className="shrink-0">{getStatusBadge(t.status)}</div>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground line-clamp-2 whitespace-pre-wrap break-all">{t.message}</p>
-                                            <div className="flex justify-between items-center mt-2 pt-3 border-t">
-                                                <span className="text-xs text-muted-foreground">
-                                                    Submitted on {format(new Date(t.createdAt), 'MMM d, yyyy h:mm a')}
-                                                </span>
-                                                {t.adminNotes && (
-                                                    <span className="text-xs font-medium text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md">
-                                                        Admin replied
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {t.adminNotes && (
-                                                <div className="mt-2 p-3 bg-muted/30 rounded-md text-sm border-l-2 border-yellow-500 overflow-hidden">
-                                                    <span className="font-semibold text-xs uppercase text-muted-foreground block mb-1">Admin Response:</span>
-                                                    <span className="whitespace-pre-wrap break-all">{t.adminNotes}</span>
-                                                </div>
-                                            )}
+                                <div className="space-y-1.5">
+                                    <Textarea
+                                        placeholder="Describe your problem..."
+                                        rows={5}
+                                        maxLength={2000}
+                                        className="resize-none rounded-xl bg-secondary/50 focus-visible:bg-card"
+                                        value={message}
+                                        onChange={(e) => setMessage(sanitizeInput(e.target.value))}
+                                    />
+                                    <p className="text-right text-[11px] tabular-nums text-muted-foreground">{message.length}/2000</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        handleSendTicket();
+                                        // Refetch history right after a short delay so the new ticket shows up if user switches tabs
+                                        setTimeout(() => refetchHistory(), 500);
+                                    }}
+                                    disabled={mutation.isPending || !subject.trim() || !message.trim()}
+                                    className="flood-btn group/send flex h-11 w-full items-center gap-2 rounded-full bg-foreground pl-1.5 pr-5 text-sm font-semibold text-background duration-300 hover:shadow-float disabled:pointer-events-none disabled:opacity-50"
+                                >
+                                    <span className="flood-btn-icon grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
+                                        {mutation.isPending ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Send className="h-3.5 w-3.5 transition-transform duration-300 group-hover/send:-rotate-12" />
+                                        )}
+                                    </span>
+                                    <span className="flood-btn-label flex-1 pr-8 text-center">Submit Ticket</span>
+                                </button>
+                            </div>
+                        </section>
+
+                        {/* ── FAQs ── */}
+                        <section className="order-2 animate-fade-up rounded-3xl bg-card p-6 shadow-card ring-1 ring-foreground/[0.07] [animation-delay:260ms] lg:order-1 lg:col-span-2">
+                            <div className="mb-5 flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground">
+                                        <HelpCircle className="h-[18px] w-[18px]" />
+                                    </span>
+                                    <div>
+                                        <h2 className="font-display text-lg font-bold tracking-tight">Frequently Asked Questions</h2>
+                                        <p className="text-[13px] text-muted-foreground">Quick answers to common questions about MutinyX.</p>
+                                    </div>
+                                </div>
+                                {faqs.length > 0 && (
+                                    <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold tabular-nums text-muted-foreground">{faqs.length}</span>
+                                )}
+                            </div>
+
+                            {faqsLoading ? (
+                                <div className="space-y-2">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i} className="space-y-2 rounded-2xl bg-secondary/50 p-4">
+                                            <Skeleton className="h-4 w-3/4" />
+                                            <Skeleton className="h-3 w-2/3" />
                                         </div>
                                     ))}
                                 </div>
+                            ) : faqs.length === 0 ? (
+                                <div className="rounded-2xl bg-secondary/50 py-10 text-center text-muted-foreground">
+                                    <HelpCircle className="mx-auto mb-3 h-10 w-10 text-muted-foreground/20" />
+                                    <p className="text-sm">No FAQs available at the moment.</p>
+                                </div>
+                            ) : (
+                                <Accordion type="single" collapsible className="w-full space-y-2">
+                                    {faqs.map((faq, i) => (
+                                        <AccordionItem
+                                            key={faq.id ?? i}
+                                            value={`item-${faq.id ?? i}`}
+                                            className="rounded-2xl border-0 bg-secondary/50 px-4 transition-colors hover:bg-secondary data-[state=open]:bg-brand/10 data-[state=open]:ring-1 data-[state=open]:ring-brand/40"
+                                        >
+                                            <AccordionTrigger className="text-left text-sm font-semibold hover:no-underline">{faq.question}</AccordionTrigger>
+                                            <AccordionContent className="text-[13px] leading-relaxed text-muted-foreground">
+                                                {faq.answer}
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    ))}
+                                </Accordion>
                             )}
-                        </CardContent>
-                    </Card>
+                        </section>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="history" className="mt-0">
+                    <section className="animate-fade-up rounded-3xl bg-card p-6 shadow-card ring-1 ring-foreground/[0.07]">
+                        <div className="mb-5 flex items-center gap-3">
+                            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground">
+                                <MessageSquare className="h-[18px] w-[18px]" />
+                            </span>
+                            <div>
+                                <h2 className="font-display text-lg font-bold tracking-tight">My Tickets</h2>
+                                <p className="text-[13px] text-muted-foreground">Track the status of your recent support queries.</p>
+                            </div>
+                        </div>
+
+                        {historyLoading ? (
+                            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                        ) : tickets.length === 0 ? (
+                            <div className="rounded-2xl bg-secondary/50 py-10 text-center text-muted-foreground">
+                                <MessageSquare className="mx-auto mb-3 h-12 w-12 text-muted-foreground/30" />
+                                <p className="text-sm">You haven't submitted any tickets yet.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {tickets.map((t: any) => (
+                                    <div key={t.id} className="flex flex-col gap-3 overflow-hidden rounded-2xl bg-secondary/40 p-4 ring-1 ring-foreground/[0.05] transition-colors hover:bg-secondary/70">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <h3 className="min-w-0 break-all text-sm font-semibold">{t.subject}</h3>
+                                            <div className="shrink-0">{getStatusBadge(t.status)}</div>
+                                        </div>
+                                        <p className="line-clamp-2 whitespace-pre-wrap break-all text-[13px] text-muted-foreground">{t.message}</p>
+                                        <div className="flex items-center justify-between border-t border-foreground/[0.06] pt-3">
+                                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                <Clock className="h-3 w-3" />
+                                                Submitted on {format(new Date(t.createdAt), 'MMM d, yyyy h:mm a')}
+                                            </span>
+                                            {t.adminNotes && (
+                                                <span className="rounded-full bg-brand/20 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+                                                    Admin replied
+                                                </span>
+                                            )}
+                                        </div>
+                                        {t.adminNotes && (
+                                            <div className="overflow-hidden rounded-xl border-l-[3px] border-brand bg-card p-3 text-sm">
+                                                <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Admin Response:</span>
+                                                <span className="whitespace-pre-wrap break-all">{t.adminNotes}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 </TabsContent>
             </Tabs>
         </div>

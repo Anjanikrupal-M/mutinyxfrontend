@@ -261,7 +261,7 @@ export function Sidebar({ variant = 'default' }: SidebarProps) {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             className={cn(
-                'hidden md:flex fixed left-0 top-0 z-[100] h-screen bg-sidebar border-r border-sidebar-border flex-col shadow-[4px_0_24px_-8px_rgba(0,0,0,0.22)] transition-[width] duration-300 ease-in-out',
+                'hidden md:flex fixed left-3 top-3 bottom-3 z-[100] bg-sidebar border border-sidebar-border rounded-[28px] overflow-hidden flex-col shadow-float transition-[width] duration-300 ease-in-out',
                 isHovered ? 'w-[240px]' : 'w-[68px]'
             )}
         >
