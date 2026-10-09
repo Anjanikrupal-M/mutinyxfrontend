@@ -37,6 +37,8 @@ interface TileProps {
     collapsible?: { summary: string; defaultOpen: boolean };
     /** Grid placement and entrance delay, e.g. "lg:col-span-6 [animation-delay:140ms]". */
     className?: string;
+    /** Recolours the round icon in the header (grey by default), e.g. "bg-brand text-black". */
+    iconClassName?: string;
     children?: ReactNode;
 }
 
@@ -45,12 +47,12 @@ interface TileProps {
  * brand outline and a deeper shadow. No transform is used for the lift — that would trap
  * popovers behind later tiles.
  */
-export function Tile({ icon: Icon, title, description, required, optional, aside, collapsible, className, children }: TileProps) {
+export function Tile({ icon: Icon, title, description, required, optional, aside, collapsible, className, iconClassName, children }: TileProps) {
     const [open, setOpen] = useState(collapsible ? collapsible.defaultOpen : true);
 
     const heading = (
         <>
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary text-foreground">
+            <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-secondary text-foreground', iconClassName)}>
                 <Icon className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">

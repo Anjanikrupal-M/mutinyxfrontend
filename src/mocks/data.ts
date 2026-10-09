@@ -1083,3 +1083,16 @@ export type Application = typeof MOCK_APPLICATIONS[number];
 export type Script = typeof MOCK_SCRIPTS[number];
 export type Submission = typeof MOCK_SUBMISSIONS[number];
 export type Negotiation = typeof MOCK_NEGOTIATIONS[number];
+
+// Placeholder covers (nature photos from Unsplash) for campaigns that have no cover image yet,
+// e.g. in the dashboard's Live campaigns carousel. Not real campaign art: remove once every
+// campaign has its own cover.
+const unsplashCover = (id: string) => `https://images.unsplash.com/photo-${id}?w=480&h=480&fit=crop&q=70&auto=format`;
+export const MOCK_CAMPAIGN_COVERS = [
+    { src: unsplashCover('1470071459604-3b5ec3a7fe05'), alt: 'Fog rolling through a forested valley at first light' },
+    { src: unsplashCover('1501785888041-af3ef285b470'), alt: 'Mountain lake mirroring a ridgeline at dusk' },
+    { src: unsplashCover('1500534314209-a25ddb2bd429'), alt: 'Sunlit dune ridge under a blue sky' },
+    { src: unsplashCover('1441974231531-c6227db76b6e'), alt: 'Sunlight breaking through a stand of trees' },
+    { src: unsplashCover('1519681393784-d120267933ba'), alt: 'Snow-covered peak under a starry sky' },
+    { src: unsplashCover('1465101162946-4377e57745c3'), alt: 'Night sky over a dark mountain landscape' },
+];

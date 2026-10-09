@@ -37,6 +37,8 @@ export function AppShell() {
             {/* Sidebar: hidden on mobile, visible on md+ */}
             {/* White backing behind the floating rail so its gutter matches the white Topbar */}
             <div className="hidden md:block fixed left-0 top-0 z-[99] h-screen w-[80px] bg-white" />
+            {/* …and its top corner carries the Topbar's yellow bottom line, so the line runs edge to edge behind the rail. */}
+            <div className="hidden md:block fixed left-0 top-0 z-[99] h-16 w-[80px] border-b-2 border-brand bg-white" />
             <Sidebar />
 
             {/* Main content: desktop uses fixed sidebar offset (mini-width) */}

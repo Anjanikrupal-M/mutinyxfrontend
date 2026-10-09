@@ -2374,14 +2374,26 @@ export default function CampaignBuilderPage() {
         clearError('locationStates');
     };
 
+    // Visibility can be changed freely while the campaign is still being put together (new or a
+    // saved draft). It is fixed once the campaign has launched — going private then delists it and
+    // clears tier pricing, which can't be undone — and for program campaigns, which are always private.
+    const hasLaunched = isEdit && campaignData?.status !== 'draft';
+    const canSwitchToPublic = isPrivate && !programId && !hasLaunched;
+
     const switchToPrivate = () => {
         if (isPrivate) return;
-        if (id || draftCampaignId) {
+        if (hasLaunched) {
+            // A live public campaign: confirm first, the change is permanent.
             setShowConvertToPrivateModal(true);
         } else {
             update('visibility', 'private');
             toast.success('Switched to Private (Invite Only).');
         }
+    };
+    const switchToPublic = () => {
+        if (!canSwitchToPublic) return;
+        update('visibility', 'public');
+        toast.success('Switched to Public (Open applications).');
     };
 
     const formatIdsFor = (platformKey: string) => (CONTENT_FORMATS_BY_PLATFORM[platformKey] || []).map((f) => f.id);
@@ -3186,9 +3198,9 @@ export default function CampaignBuilderPage() {
                                                     title="Public"
                                                     description="Open applications"
                                                     selected={!isPrivate}
-                                                    // Private campaigns can't be made public again.
-                                                    disabled={isPrivate}
-                                                    onSelect={() => undefined}
+                                                    // Locked only once the campaign has launched as private, or for a program campaign.
+                                                    disabled={isPrivate && !canSwitchToPublic}
+                                                    onSelect={switchToPublic}
                                                 />
                                                 <OptionCard
                                                     icon={LockKeyhole}
@@ -3201,9 +3213,13 @@ export default function CampaignBuilderPage() {
                                         </Field>
                                         <Field label="What this means">
                                             <Note key={form.visibility}>
-                                                {isPrivate
-                                                    ? "Hidden from the marketplace. Only creators you invite can apply. This can't be switched back to public."
-                                                    : 'Listed in the creator marketplace. Any eligible creator can apply.'}
+                                                {!isPrivate
+                                                    ? 'Listed in the creator marketplace. Any eligible creator can apply.'
+                                                    : canSwitchToPublic
+                                                        ? 'Hidden from the marketplace. Only creators you invite can apply. You can still switch back to public until the campaign is launched.'
+                                                        : programId
+                                                            ? 'Hidden from the marketplace. Only creators you invite can apply. Program campaigns are always private.'
+                                                            : "Hidden from the marketplace. Only creators you invite can apply. This can't be switched back to public."}
                                             </Note>
                                         </Field>
                                     </Tile>

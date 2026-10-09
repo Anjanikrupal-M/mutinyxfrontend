@@ -873,6 +873,12 @@
   animation: stat-glow-breathe 4s ease-in-out infinite;
 }
 
+/* Dashboard, second visit onward in a session: the staggered entrance animations are skipped so
+   a page opened many times a day appears at once. DashboardPage adds .dash-still to its root. */
+.dash-still :is(.animate-fade-up, .animate-rise, .animate-pop, .animate-slide-in-left, .stat-bar) {
+  animation: none;
+}
+
 /* Dashboard stat cards in 3D: they flip up into place on load, then tilt toward the pointer.
    StatCard sets --rx / --ry (tilt) while the mouse is over it. */
 .stat-3d {
