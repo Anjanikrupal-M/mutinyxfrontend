@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
-import { Check, Link as LinkIcon, Loader2, MessageSquare, Upload, Send, ChevronLeft, ChevronRight, MoreVertical, UserRoundX } from 'lucide-react';
+import { ArrowRight, Check, Link as LinkIcon, Wallet, Loader2, MessageSquare, Upload, Send, ChevronLeft, ChevronRight, MoreVertical, UserRoundX } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ApiImage } from '@/shared/components/ApiImage';
@@ -685,11 +685,41 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
     return (
         <div className={cn("grid grid-cols-1 gap-6", showFinalPayout && "lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]")}>
             <div className="space-y-4 min-w-0">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-                    <div>
-                        <h2 className="text-lg font-bold font-display tracking-tight">Work Submissions</h2>
-                        <p className="text-xs text-muted-foreground mt-0.5">Share one link to let anyone review every work submission for this campaign.</p>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-border bg-card p-4 shadow-card">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-black">
+                            <Send className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                            <h2 className="font-display text-lg font-semibold leading-6 tracking-tight">Work Submissions</h2>
+                            <p className="text-xs text-muted-foreground">Share one link to let anyone review every work submission for this campaign.</p>
+                        </div>
                     </div>
+                    {/* Where the work stands: waiting on you, approved, sent back. */}
+                    {groups.length > 0 && (() => {
+                        const tally = { waiting: 0, approved: 0, rejected: 0 };
+                        for (const group of groups) {
+                            const statuses = group.workSubmissions.map((ws: any) => String(ws.status ?? '').toLowerCase());
+                            if (statuses.includes('pending')) tally.waiting += 1;
+                            else if (statuses.includes('rejected')) tally.rejected += 1;
+                            else tally.approved += 1;
+                        }
+                        return (
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                <span className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold', tally.waiting > 0 ? 'bg-brand text-black' : 'bg-secondary text-muted-foreground')}>
+                                    <span className="tabular-nums">{tally.waiting}</span> to review
+                                </span>
+                                <span className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-semibold text-foreground/80">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /><span className="tabular-nums">{tally.approved}</span> approved
+                                </span>
+                                {tally.rejected > 0 && (
+                                    <span className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-semibold text-foreground/80">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /><span className="tabular-nums">{tally.rejected}</span> sent back
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })()}
                     {!isReadOnly && (
                         <CopyBulkReviewLinkButton
                             kind="work"
@@ -702,11 +732,13 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                 {isLoading ? (
                     <ReviewCardsSkeleton />
                 ) : flatSubmissions.length === 0 ? (
-                    <div className="bg-card border border-border rounded-2xl min-h-[250px] p-12 text-center text-muted-foreground text-sm flex items-center justify-center">
-                        No work submissions yet.
+                    <div className="flex min-h-[250px] flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-border bg-card p-12 text-center">
+                        <span className="grid h-12 w-12 place-items-center rounded-full bg-secondary text-muted-foreground"><Send className="h-5 w-5" /></span>
+                        <p className="text-sm font-semibold">No work submissions yet</p>
+                        <p className="text-xs text-muted-foreground">Posts and files show up here as creators submit them.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                         {groups.map((group) => {
                             const latestSub = preferredReviewItem(group.workSubmissions, requiredSlots)
                                 ?? group.workSubmissions[0];
@@ -714,18 +746,23 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                             const slots = formatSlotsFromItems(requiredSlots, group.workSubmissions);
                             const countLabel = formatCountLabel(group.workSubmissions.length, slots);
                             const displayName = latestSub.influencerName || 'Unknown Influencer';
+                            // Anything still waiting on the brand gets the yellow outline and a "Review" call to action.
+                            const isWaiting = group.workSubmissions.some((ws: any) => String(ws.status ?? '').toLowerCase() === 'pending');
                             const cardBody = (
                                 <button
                                     type="button"
                                     onClick={() => openSubmissionModal(latestSub)}
-                                    className="text-left bg-card border border-border hover:border-foreground/30 hover:shadow-md transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group"
+                                    className={cn(
+                                        "text-left border rounded-2xl p-4 flex flex-col justify-between group shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card",
+                                        isWaiting ? "border-brand bg-brand/5 hover:border-foreground/40" : "border-border bg-card hover:border-foreground/20",
+                                    )}
                                 >
                                     <div>
                                         <div className="flex items-start justify-between gap-2 mb-3">
                                             <div className="flex items-center gap-2.5 min-w-0">
                                                 <div 
                                                     onClick={(e) => { e.stopPropagation(); setQuickViewId(latestSub.influencerId); }}
-                                                    className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-[#fedc03] transition-all"
+                                                    className="w-10 h-10 rounded-full bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 cursor-pointer ring-2 ring-brand/40 ring-offset-1 ring-offset-card hover:ring-brand transition-all"
                                                 >
                                                     {latestSub.influencerAvatar ? (
                                                         <ApiImage src={latestSub.influencerAvatar} alt={displayName} className="w-full h-full object-cover" />
@@ -751,7 +788,7 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                     const payoutState = finalPayoutState(latestSub);
                                                     if (payoutState === 'not_ready' || payoutState === 'paid') return null;
                                                     const payoutBadge = {
-                                                        in_round: { label: 'To be paid', className: 'bg-primary/15 text-foreground border-primary/40' },
+                                                        in_round: { label: 'To be paid', className: 'bg-brand/20 text-foreground border-brand/50' },
                                                         processing: { label: 'Payment processing', className: 'bg-amber-500/10 text-amber-700 border-amber-300 dark:text-amber-400 dark:border-amber-800' },
                                                     }[payoutState];
                                                     return (
@@ -767,22 +804,33 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                         {slots.length > 1 ? (
                                             <FormatSlotsList slots={slots} />
                                         ) : (
-                                            <div className="flex items-center gap-1.5 text-xs font-medium mb-1 uppercase tracking-wider text-muted-foreground">
-                                                {latestSub.type === 'file' ? <Upload className="w-3.5 h-3.5" /> : <LinkIcon className="w-3.5 h-3.5" />}
+                                            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-[11px] font-semibold text-foreground/75">
+                                                {latestSub.type === 'file' ? <Upload className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
                                                 <span>{slotItemLabel({ type: String(latestSub.type ?? ''), contentFormat: String(latestSub.type ?? ''), itemIndex: latestSub.itemIndex }, requiredSlots)}</span>
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="mt-3 pt-2.5 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
-                                        {countLabel ? (
-                                            <span className="inline-flex px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold lowercase tracking-normal">
-                                                {countLabel}
+                                    <div className="mt-3 pt-3 border-t border-dashed border-border flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                                        <span className="flex min-w-0 items-center gap-2">
+                                            {countLabel && (
+                                                <span className="inline-flex shrink-0 px-2 py-0.5 rounded-full bg-foreground text-background text-[10px] font-bold lowercase tracking-normal">
+                                                    {countLabel}
+                                                </span>
+                                            )}
+                                            <span className="truncate">
+                                                {new Date(latestSub.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </span>
-                                        ) : <span />}
-                                        <span>
-                                            Latest: {new Date(latestSub.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                         </span>
+                                        {isWaiting ? (
+                                            <span className="flex shrink-0 items-center gap-1 rounded-full bg-foreground py-1 pl-3 pr-2 text-[11px] font-semibold text-background transition-transform duration-200 group-hover:translate-x-0.5">
+                                                Review <ArrowRight className="h-3 w-3" />
+                                            </span>
+                                        ) : (
+                                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-foreground/60 transition-colors duration-200 group-hover:bg-foreground group-hover:text-brand">
+                                                <ArrowRight className="h-3.5 w-3.5" />
+                                            </span>
+                                        )}
                                     </div>
                                 </button>
                             );
@@ -792,7 +840,7 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                     {group.influencerKey === dividerBeforeGroupKey && (
                                         <div className="col-span-full flex items-center gap-3 pt-3 pb-1" aria-hidden="true">
                                             <div className="h-px flex-1 bg-border" />
-                                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                                            <span className="rounded-full bg-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand">
                                                 Final payout settled
                                             </span>
                                             <div className="h-px flex-1 bg-border" />
@@ -808,18 +856,22 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
 
             {showFinalPayout && (
                 <div className="space-y-4">
-                    <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5 sticky top-20 shadow-sm">
-                        <h3 className="text-sm font-semibold mb-3">Final Payout</h3>
+                    <div className="relative overflow-hidden rounded-3xl border border-brand/30 bg-card bg-gradient-to-br from-brand/10 via-brand/[0.04] to-brand/25 p-4 sm:p-5 sticky top-20 shadow-card">
+                        <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
+                        <h3 className="relative mb-4 flex items-center gap-2.5 font-display text-base font-semibold tracking-tight">
+                            <span className="grid h-9 w-9 place-items-center rounded-full bg-brand text-black"><Wallet className="h-4 w-4" /></span>
+                            Final payout
+                        </h3>
                         {isLoadingPaymentSummary || !finalSummary ? (
                             <div className="text-xs text-muted-foreground">Loading payment summary...</div>
                         ) : (
-                            <>
+                            <div className="relative">
                                 <PaymentSummary title={finalRoundLabel} summary={finalSummary} />
 
                                 {/* Name the creators in this round — with staggered payouts a bare
                                     total tells the brand nothing about who it covers. */}
                                 {finalPayoutRoster.inRound.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-border">
+                                    <div className="mt-3 pt-3 border-t border-dashed border-foreground/15">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
                                             Paying now ({finalPayoutRoster.inRound.length})
                                         </p>
@@ -842,7 +894,7 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                 )}
 
                                 {finalPayoutRoster.paid.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-border">
+                                    <div className="mt-3 pt-3 border-t border-dashed border-foreground/15">
                                         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
                                             Already paid ({finalPayoutRoster.paid.length})
                                         </p>
@@ -861,14 +913,14 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                     onClick={() => void handlePayFinal()}
                                     disabled={!canPayFinal || isProcessingFinalPayment || hasCompletedFinalPayment || isCampaignDisabled}
                                     className={cn(
-                                        'w-full mt-4 py-3 font-bold rounded-xl transition-all disabled:cursor-not-allowed text-xs',
+                                        'w-full mt-4 h-11 px-4 font-semibold rounded-full transition-all duration-200 disabled:cursor-not-allowed text-xs',
                                         isCampaignDisabled
                                             ? 'bg-secondary text-muted-foreground border border-border'
                                             : hasCompletedFinalPayment
                                                 ? 'bg-emerald-600/15 text-emerald-700 border border-emerald-300'
                                                 : canPayFinal
-                                                    ? 'bg-foreground text-background hover:opacity-90'
-                                                    : 'bg-secondary text-muted-foreground border border-border'
+                                                    ? 'bg-foreground text-background shadow-sm hover:-translate-y-0.5 hover:shadow-float'
+                                                    : 'bg-card/70 text-muted-foreground border border-dashed border-foreground/20'
                                     )}
                                 >
                                     {isCampaignWithdrawn
@@ -892,11 +944,11 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                                          : 'No eligible final payouts'}
                                 </button>
                                 {(campaign.proofOfWorkRequired || campaign.proofOfWorkReq) && (
-                                    <p className="text-[11px] text-muted-foreground mt-3">
+                                    <p className="text-[11px] leading-relaxed text-muted-foreground mt-3">
                                         After payment, creators post their content and share proof links in the Proof of Work tab. Approving the proof completes the campaign.
                                     </p>
                                 )}
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -916,12 +968,15 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                 }}
             >
                 {modalSubmission && (
-                    <DialogContent className="max-w-7xl w-[95vw] h-[92vh] max-h-[92vh] overflow-hidden p-0 flex flex-col">
-                        <DialogHeader className="p-4 md:p-5 border-b border-border shrink-0">
+                    <DialogContent className="max-w-7xl w-[95vw] h-[92vh] max-h-[92vh] overflow-hidden p-0 flex flex-col rounded-3xl gap-0">
+                        <DialogHeader className="px-4 py-3 md:px-5 border-b border-border bg-card shrink-0">
                             <DialogTitle className="flex items-center gap-3 pr-10">
-                                <span className="flex items-center gap-2 text-sm md:text-base font-semibold">
-                                    <Send className="w-4 h-4 text-muted-foreground" />
-                                    Work Submission Review
+                                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-black">
+                                    <Send className="h-4 w-4" />
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="block font-display text-base font-semibold leading-5 tracking-tight">Work submission review</span>
+                                    <span className="block truncate text-xs font-normal text-muted-foreground">{modalSubmission.influencerName} · {campaign.name}</span>
                                 </span>
                                 <StatusBadge status={submissionDisplayStatus(modalSubmission.status) as any} />
                                 {/* Creator replacement — offered while the creator sits in a
@@ -957,68 +1012,78 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                         </DropdownMenu>
                                     );
                                 })()}
+                                {groups.length > 1 && (
+                                    <span className="ml-auto mr-2 flex shrink-0 items-center gap-1 rounded-full border border-border bg-secondary/50 p-1">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); navigateSubmission('prev'); }}
+                                            className="grid h-7 w-7 place-items-center rounded-full bg-card shadow-sm transition-colors hover:bg-foreground hover:text-brand"
+                                            title="Previous creator"
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </button>
+                                        <span className="px-1.5 text-xs font-semibold tabular-nums">
+                                            {groups.findIndex(g => g.influencerKey === openedInfluencerKey) + 1} <span className="text-muted-foreground">of {groups.length}</span>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); navigateSubmission('next'); }}
+                                            className="grid h-7 w-7 place-items-center rounded-full bg-card shadow-sm transition-colors hover:bg-foreground hover:text-brand"
+                                            title="Next creator"
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </button>
+                                    </span>
+                                )}
                             </DialogTitle>
                             <DialogDescription className="sr-only">
                                 Review submitted media, take approval actions, and inspect submission history.
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="flex-1 overflow-hidden p-4 md:p-5 relative">
-                            {/* Navigation Arrows */}
-                            {groups.length > 1 && (
-                                <>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigateSubmission('prev');
-                                        }}
-                                        className="absolute left-1 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-xl hover:bg-primary hover:text-primary-foreground transition-premium group"
-                                        title="Previous Application"
-                                    >
-                                        <ChevronLeft className="w-6 h-6" />
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigateSubmission('next');
-                                        }}
-                                        className="absolute right-1 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-xl hover:bg-primary hover:text-primary-foreground transition-premium group"
-                                        title="Next Application"
-                                    >
-                                        <ChevronRight className="w-6 h-6" />
-                                    </button>
-                                    
-                                    {/* Page Indicator */}
-                                    <div className="absolute top-2 right-4 z-50 px-2 py-1 rounded-md bg-secondary/50 backdrop-blur-sm text-[10px] font-bold text-muted-foreground">
-                                        {groups.findIndex(g => g.influencerKey === openedInfluencerKey) + 1} / {groups.length}
-                                    </div>
-                                </>
-                            )}
-
+                        <div className="flex-1 overflow-hidden bg-secondary/40 p-4 md:p-5 relative">
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
                                 {/* Left Column: Campaign Details, Deliverables, Creator */}
                                 <div className="flex flex-col lg:col-span-3 gap-4 lg:h-full lg:overflow-hidden">
-                                    <div className="hidden lg:block bg-secondary/30 border border-border rounded-xl p-4 shrink-0">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-wider">Campaign Details</p>
-                                        <p className="text-sm font-semibold">{campaign.name}</p>
-                                        <div className="space-y-1.5 mt-2 text-[11px]">
-                                            <p><span className="text-muted-foreground">Type:</span> <span className="capitalize">{campaign.type}</span></p>
-                                            <p><span className="text-muted-foreground">Status:</span> <span className="capitalize">{campaign.status}</span></p>
-                                            <p>
-                                                <span className="text-muted-foreground">Budget:</span>{' '}
-                                                {formatTierPricing()}
-                                            </p>
-                                            <p>
-                                                <span className="text-muted-foreground">Deadline:</span>{' '}
-                                                {formatDateSafe(campaign.workDeadline || campaign.timeline?.workDeadline || campaign.deadline, { day: 'numeric', month: 'short' })}
-                                            </p>
-                                            {(campaign.proofOfWorkRequired || campaign.proofOfWorkReq) && (
-                                                <p>
-                                                    <span className="text-muted-foreground">Proof Deadline:</span>{' '}
-                                                    {formatDateSafe(campaign.proofOfWorkDeadline || campaign.timeline?.proofOfWorkDeadline, { day: 'numeric', month: 'short' })}
+                                    {/* Who made it — a yellow-tinted card like the dashboard's stat cards. */}
+                                    <div className="hidden lg:block relative overflow-hidden rounded-3xl border border-brand/30 bg-card bg-gradient-to-br from-brand/10 via-brand/[0.04] to-brand/25 p-4 shrink-0 shadow-card">
+                                        <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand/30 blur-3xl" />
+                                        <div className="relative flex items-center gap-3">
+                                            <div
+                                                onClick={() => setQuickViewId(modalSubmission.influencerId)}
+                                                className="grid h-12 w-12 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-full bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-base font-bold text-brand ring-2 ring-brand ring-offset-2 ring-offset-card"
+                                            >
+                                                {modalSubmission.influencerAvatar ? (
+                                                    <ApiImage src={modalSubmission.influencerAvatar} alt={modalSubmission.influencerName || ''} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    (modalSubmission.influencerName || '?').charAt(0)
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p
+                                                    onClick={() => setQuickViewId(modalSubmission.influencerId)}
+                                                    className="truncate font-display text-base font-semibold tracking-tight cursor-pointer underline-offset-2 hover:underline"
+                                                >
+                                                    {modalSubmission.influencerName}
                                                 </p>
-                                            )}
+                                                <p className="text-xs text-muted-foreground truncate">{modalSubmission.influencerHandle || '@unknown'}</p>
+                                            </div>
                                         </div>
+                                        <dl className="relative mt-4 grid grid-cols-2 gap-1.5 text-[11px]">
+                                            {[
+                                                { label: 'Budget', value: formatTierPricing() },
+                                                { label: 'Work due', value: formatDateSafe(campaign.workDeadline || campaign.timeline?.workDeadline || campaign.deadline, { day: 'numeric', month: 'short' }) },
+                                                { label: 'Type', value: String(campaign.type ?? '—') },
+                                                ...((campaign.proofOfWorkRequired || campaign.proofOfWorkReq)
+                                                    ? [{ label: 'Proof due', value: formatDateSafe(campaign.proofOfWorkDeadline || campaign.timeline?.proofOfWorkDeadline, { day: 'numeric', month: 'short' }) }]
+                                                    : [{ label: 'Status', value: String(campaign.status ?? '—') }]),
+                                            ].map((fact) => (
+                                                <div key={fact.label} className="min-w-0 rounded-xl border border-border bg-card px-2.5 py-2">
+                                                    <dt className="text-muted-foreground">{fact.label}</dt>
+                                                    <dd className="mt-0.5 truncate font-semibold capitalize" title={fact.value}>{fact.value}</dd>
+                                                </div>
+                                            ))}
+                                        </dl>
                                     </div>
 
                                     <DeliverableSlotsPanel
@@ -1029,50 +1094,29 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                         className="lg:flex-1 lg:min-h-0 overflow-y-auto scrollbar-thin"
                                     />
 
-                                    <div className="hidden lg:block bg-card border border-border rounded-2xl p-4 shrink-0">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-3 tracking-wider">Creator</p>
-                                        <div className="flex items-center gap-3">
-                                            <div 
-                                                onClick={() => setQuickViewId(modalSubmission.influencerId)}
-                                                className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex items-center justify-center shrink-0 cursor-pointer hover:ring-2 hover:ring-[#fedc03] transition-all"
-                                            >
-                                                {modalSubmission.influencerAvatar ? (
-                                                    <ApiImage src={modalSubmission.influencerAvatar} alt={modalSubmission.influencerName || ''} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    (modalSubmission.influencerName || '?').charAt(0)
-                                                )}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p 
-                                                    onClick={() => setQuickViewId(modalSubmission.influencerId)}
-                                                    className="text-sm font-semibold truncate cursor-pointer hover:text-primary transition-colors"
-                                                >
-                                                    {modalSubmission.influencerName}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground truncate">{modalSubmission.influencerHandle || '@unknown'}</p>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* Main Content Column */}
-                                <div className="lg:col-span-6 bg-card border border-border rounded-2xl p-4 flex flex-col overflow-y-auto scrollbar-hide">
-                                    <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground mb-3">
-                                        <span>
-                                            Submitted {formatDateSafe(modalSubmission.submittedAt, { day: 'numeric', month: 'short', year: 'numeric' })}
-                                        </span>
-                                        {modalSubmission.reviewedAt && (
-                                            <span>
+                                <div className="lg:col-span-6 rounded-3xl border border-border bg-card p-4 shadow-card flex min-h-0 flex-col overflow-y-auto lg:overflow-hidden scrollbar-hide">
+                                    {modalSubmission.reviewedAt && (
+                                        <div className="mb-3 flex text-[11px]">
+                                            <span className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-semibold text-foreground/80">
+                                                <Check className="h-3 w-3" />
                                                 Reviewed {formatDateSafe(modalSubmission.reviewedAt, { day: 'numeric', month: 'short' })}
                                             </span>
-                                        )}
+                                        </div>
+                                    )}
+
+                                    <div className="min-h-[420px] lg:min-h-0 lg:flex-1">
+                                        <SubmissionMediaViewer submission={modalSubmission} fill />
                                     </div>
 
-                                    <SubmissionMediaViewer submission={modalSubmission} />
+                                    {/* Notes below the post scroll on their own, so the post never moves. */}
+                                    <div className="shrink-0 lg:max-h-40 lg:overflow-y-auto scrollbar-thin">
 
                                     {modalSubmission.textContent && (
-                                        <div className="mt-4 shrink-0 rounded-lg border border-border bg-secondary/30 overflow-hidden">
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-3 pt-2.5 pb-1.5 border-b border-border/60">Submission Note</p>
+                                        <div className="mt-4 shrink-0 rounded-2xl border-l-[3px] border-brand bg-secondary/50 overflow-hidden">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-3 pt-2.5 pb-1">Note from the creator</p>
                                             <div className="p-3 text-sm whitespace-pre-wrap leading-6 italic max-h-64 overflow-y-auto scrollbar-thin">
                                                 "{modalSubmission.textContent}"
                                             </div>
@@ -1081,7 +1125,7 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
 
                                     {(modalSubmission.reviewNote || (modalSubmission as any).externalReviewerName) && modalSubmission.status !== 'pending' && (
                                         <div className={cn(
-                                            'flex items-start gap-2 p-3 rounded-lg text-xs mt-4',
+                                            'flex items-start gap-2 p-3 rounded-2xl text-xs mt-4',
                                             modalSubmission.status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-secondary'
                                         )}>
                                             <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -1097,12 +1141,13 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                             </div>
                                         </div>
                                     )}
+                                    </div>
                                 </div>
 
                                 {/* Right Panel (Actions + History) */}
                                 <div className="lg:col-span-3 lg:flex lg:flex-col gap-4 overflow-y-auto scrollbar-hide">
-                                    {!isReadOnly && <div className="bg-secondary/30 border border-border rounded-xl p-4 shrink-0">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-3 tracking-wider">Actions</p>
+                                    {!isReadOnly && <div className="rounded-3xl border border-border bg-card p-4 shrink-0 shadow-card">
+                                        <p className="mb-3 font-display text-sm font-semibold tracking-tight">Your decision</p>
                                         <CopyReviewLinkButton
                                             kind="work"
                                             shareToken={(modalSubmission as any).shareToken}
@@ -1118,20 +1163,20 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                         setIsAcceptFormOpen((prev) => !prev);
                                                     }}
                                                     disabled={isActionLoading}
-                                                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-premium disabled:opacity-50"
+                                                    className="group/approve flex h-11 items-center justify-center gap-2 rounded-full bg-brand pl-1.5 pr-4 text-sm font-semibold text-black shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.98] disabled:opacity-50"
                                                 >
-                                                    <Check className="w-3.5 h-3.5" />
-                                                    Approve
+                                                    <span className="grid h-8 w-8 place-items-center rounded-full bg-card transition-transform duration-200 group-hover/approve:scale-110"><Check className="h-4 w-4" strokeWidth={3} /></span>
+                                                    <span className="flex-1 pr-8 text-center">Approve</span>
                                                 </button>
 
                                                 {isAcceptFormOpen && (
-                                                    <div className="space-y-2 rounded-lg border border-border bg-background p-2">
+                                                    <div className="space-y-2 rounded-2xl border border-border bg-secondary/40 p-2.5 animate-in fade-in slide-in-from-top-1">
                                                         <textarea
                                                             value={acceptMessage}
                                                             onChange={(e) => setAcceptMessage(e.target.value.slice(0, 300))}
                                                             maxLength={300}
                                                             placeholder="Add a message for the creator (optional)..."
-                                                            className="w-full text-xs p-2 rounded-md border border-border bg-background resize-none min-h-[88px] focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                            className="w-full text-xs p-2.5 rounded-xl border border-border bg-card resize-none min-h-[88px] focus:outline-none focus:border-foreground focus:ring-4 focus:ring-foreground/10"
                                                         />
                                                         <p className="text-right text-[10px] text-muted-foreground">{acceptMessage.length}/300</p>
                                                         <div className="flex justify-end gap-2">
@@ -1141,7 +1186,7 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                                     setIsAcceptFormOpen(false);
                                                                     setAcceptMessage('');
                                                                 }}
-                                                                className="h-8 px-2.5 rounded-md border border-border text-xs font-medium hover:bg-secondary transition-premium"
+                                                                className="h-8 px-3 rounded-full border border-border bg-card text-xs font-semibold transition-colors hover:border-foreground"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -1151,7 +1196,7 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                                 onClick={() => {
                                                                     void handleApprove(modalSubmission.id, acceptMessage);
                                                                 }}
-                                                                className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-premium disabled:opacity-50 flex items-center gap-2"
+                                                                className="h-8 px-3.5 rounded-full bg-foreground text-background text-xs font-semibold transition-all hover:shadow-card disabled:opacity-50 flex items-center gap-2"
                                                             >
                                                                 {approveSubmission.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
                                                                 Confirm Approve
@@ -1167,20 +1212,20 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                         setIsRevisionFormOpen((prev) => !prev);
                                                     }}
                                                     disabled={isActionLoading}
-                                                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-amber-600/30 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-premium disabled:opacity-50"
+                                                    className="flex h-11 items-center justify-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground transition-all duration-200 hover:border-foreground disabled:opacity-50"
                                                 >
                                                     <MessageSquare className="w-3.5 h-3.5" />
                                                     Request Revision
                                                 </button>
 
                                                 {isRevisionFormOpen && (
-                                                    <div className="space-y-2 rounded-lg border border-border bg-background p-2">
+                                                    <div className="space-y-2 rounded-2xl border border-border bg-secondary/40 p-2.5 animate-in fade-in slide-in-from-top-1">
                                                         <textarea
                                                             value={revisionMessage}
                                                             onChange={(e) => setRevisionMessage(e.target.value.slice(0, 500))}
                                                             maxLength={500}
                                                             placeholder="Specify what needs to be improved..."
-                                                            className="w-full text-xs p-2 rounded-md border border-border bg-background resize-none min-h-[88px] focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                            className="w-full text-xs p-2.5 rounded-xl border border-border bg-card resize-none min-h-[88px] focus:outline-none focus:border-foreground focus:ring-4 focus:ring-foreground/10"
                                                         />
                                                         <p className="text-right text-[10px] text-muted-foreground">{revisionMessage.length}/500</p>
                                                         <div className="flex justify-end gap-2">
@@ -1190,7 +1235,7 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                                     setIsRevisionFormOpen(false);
                                                                     setRevisionMessage('');
                                                                 }}
-                                                                className="h-8 px-2.5 rounded-md border border-border text-xs font-medium hover:bg-secondary transition-premium"
+                                                                className="h-8 px-3 rounded-full border border-border bg-card text-xs font-semibold transition-colors hover:border-foreground"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -1200,28 +1245,29 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                                 onClick={() => {
                                                                     void handleRequestRevision(modalSubmission.id);
                                                                 }}
-                                                                className="h-8 px-3 rounded-md border border-amber-600/30 bg-amber-50 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-premium disabled:opacity-50"
+                                                                className="h-8 px-3.5 rounded-full bg-foreground text-background text-xs font-semibold transition-all hover:shadow-card disabled:opacity-50"
                                                             >
-                                                                Send
+                                                                Send revision request
                                                             </button>
                                                         </div>
                                                     </div>
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="text-xs text-muted-foreground text-center py-4 bg-background/50 rounded-lg border border-border">
-                                                Already reviewed.
+                                            <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-secondary/40 py-4 text-xs font-medium text-muted-foreground">
+                                                <Check className="h-3.5 w-3.5" />
+                                                Already reviewed
                                             </div>
                                         )}
                                     </div>}
 
-                                    <div className="bg-secondary/20 border border-border rounded-xl p-3 shrink-0">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-wider">
+                                    <div className="rounded-3xl border border-border bg-card p-4 shrink-0 shadow-card">
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-3 tracking-wider">
                                             Versions{selectedSlot && <span className="font-medium normal-case tracking-normal"> · {selectedSlot.label}</span>}
                                         </p>
                                         <div className="space-y-1.5 overflow-y-auto max-h-[300px] pr-1 scrollbar-hide">
                                             {slotHistory.length === 0 && (
-                                                <div className="text-[11px] text-muted-foreground bg-card border border-border rounded-lg px-3 py-2">
+                                                <div className="text-[11px] text-muted-foreground bg-secondary/40 rounded-xl px-3 py-2">
                                                     No history available.
                                                 </div>
                                             )}
@@ -1234,10 +1280,10 @@ export function WorkSubmissionsTab({ campaign, submissions: initialSubmissions, 
                                                     onClick={() => isOpenable && setOpenedSubmissionId(ws.id)}
                                                     disabled={!isOpenable}
                                                     className={cn(
-                                                        'w-full text-left p-2 rounded-lg border text-[10px] transition-premium',
+                                                        'w-full text-left px-2.5 py-2 rounded-xl border text-[10px] transition-all duration-200',
                                                         ws.id === modalSubmission.id
-                                                            ? 'border-primary/50 bg-primary/5 shadow-sm'
-                                                            : 'border-border bg-card hover:bg-secondary',
+                                                            ? 'border-brand bg-brand/10'
+                                                            : 'border-border bg-card hover:border-foreground/30',
                                                         !isOpenable && 'opacity-80 cursor-default'
                                                     )}
                                                 >

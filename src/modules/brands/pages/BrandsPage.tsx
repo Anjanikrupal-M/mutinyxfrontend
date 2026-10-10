@@ -34,8 +34,6 @@ const statTile = 'group flex animate-fade-up flex-col justify-between gap-5 roun
 
 type BrandFilter = 'all' | 'live' | 'idle';
 
-// Circumference of the Live-now ring (r = 22).
-const LIVE_RING_LENGTH = 2 * Math.PI * 22;
 
 /** One bar per brand (up to 7); the tallest is yellow. Heights are SVG attributes, not inline styles. */
 function BrandBars({ values, label }: { values: { id: string; name: string; value: number }[]; label: string }) {
@@ -293,31 +291,14 @@ export default function BrandsPage() {
                                 <p className="border-t border-border pt-2.5 text-[11px] font-medium text-muted-foreground">Across every brand</p>
                             </div>
 
-                            {/* Live now — the one yellow tile */}
-                            <div className={cn(statTile, 'relative overflow-hidden bg-brand', cardDelay(2))}>
-                                <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-                                <span className="relative flex items-center gap-2 text-[13px] font-semibold">
-                                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-card/70"><Rocket className="h-3.5 w-3.5" /></span>
+                            {/* Live now — same white tile as its neighbours, just the count */}
+                            <div className={cn(statTile, 'border border-foreground/[0.08] bg-card', cardDelay(2))}>
+                                <span className="flex items-center gap-2 text-[13px] font-semibold">
+                                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-secondary"><Rocket className="h-3.5 w-3.5" /></span>
                                     Live now
                                 </span>
-                                <div className="relative flex items-end justify-between gap-3">
-                                    <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">{data.totals.activeCampaignCount}</p>
-                                    <span className="relative grid h-11 w-11 place-items-center">
-                                        <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90" aria-hidden>
-                                            <circle cx="28" cy="28" r="22" fill="none" strokeWidth="6" className="stroke-foreground/10" />
-                                            <circle
-                                                cx="28" cy="28" r="22" fill="none" strokeWidth="6" strokeLinecap="round"
-                                                strokeDasharray={LIVE_RING_LENGTH}
-                                                strokeDashoffset={LIVE_RING_LENGTH * (1 - (data.totals.campaignCount > 0 ? data.totals.activeCampaignCount / data.totals.campaignCount : 0))}
-                                                className="stroke-foreground transition-[stroke-dashoffset] [transition-duration:1200ms] ease-out"
-                                            />
-                                        </svg>
-                                        <span className="relative text-[10px] font-bold tabular-nums">
-                                            {data.totals.campaignCount > 0 ? Math.round((data.totals.activeCampaignCount / data.totals.campaignCount) * 100) : 0}%
-                                        </span>
-                                    </span>
-                                </div>
-                                <p className="relative border-t border-foreground/15 pt-2.5 text-[11px] font-medium text-foreground/60">
+                                <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">{data.totals.activeCampaignCount}</p>
+                                <p className="border-t border-border pt-2.5 text-[11px] font-medium text-muted-foreground">
                                     {liveBrandCount} of {brands.length} brands running
                                 </p>
                             </div>

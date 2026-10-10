@@ -8,6 +8,8 @@ import { API } from '@/core/api';
 import { queryKeys } from '@/core/queryKeys';
 import type { ApiResponse } from '@/core/types';
 import type { ScriptVersion } from '@/shared/types/campaign';
+import { isDevDemoSession } from '@/mocks/devCampaigns';
+import { demoListScripts } from '@/mocks/devCampaignTabs';
 
 // ── Queries ──
 
@@ -15,6 +17,8 @@ export function useScripts(campaignId: string) {
     return useQuery({
         queryKey: queryKeys.campaigns.scripts(campaignId),
         queryFn: async () => {
+            // Demo account in development: served from the browser (see mocks/devCampaignTabs.ts), no server call.
+            if (isDevDemoSession()) return demoListScripts(campaignId);
             const { data } = await http.get<ApiResponse<ScriptVersion[]>>(
                 API.campaigns.scripts.list(campaignId),
             );

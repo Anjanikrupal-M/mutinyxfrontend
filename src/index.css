@@ -985,7 +985,8 @@
    the whole button, and the label slides right and flips to a contrasting colour.
    Markup: .flood-btn on the button, .flood-btn-icon on the icon wrapper, .flood-btn-label on the text.
    Default floods brand yellow with dark text; .flood-btn-dark floods black with light text.
-   Add .flood-btn-grow to a bare icon (no coloured circle) so the disc grows from nothing. */
+   Add .flood-btn-grow to a bare icon (no coloured circle) so the disc grows from nothing.
+   Set --flood-scale on a button much wider than usual (e.g. a full-width one). */
 .flood-btn {
   --flood-color: theme('colors.brand.DEFAULT');
   --flood-text: hsl(var(--foreground));
@@ -1015,7 +1016,8 @@
   transform: scale(0);
 }
 .flood-btn:hover .flood-btn-icon::before {
-  transform: scale(24);
+  /* 24× covers an ordinary button; a very wide one sets --flood-scale higher so the disc reaches its far end. */
+  transform: scale(var(--flood-scale, 24));
 }
 .flood-btn:hover {
   color: var(--flood-text);

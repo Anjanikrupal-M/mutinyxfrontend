@@ -9,6 +9,8 @@ import { queryKeys } from '@/core/queryKeys';
 import type { ApiResponse } from '@/core/types';
 import type { WorkSubmission } from '@/shared/types/campaign';
 import ws from '@/core/websocket';
+import { isDevDemoSession } from '@/mocks/devCampaigns';
+import { demoListProofOfWork, demoListSubmissions } from '@/mocks/devCampaignTabs';
 
 const shouldRetryQuery = (failureCount: number, error: unknown) => {
     const status = (error as { response?: { status?: number } })?.response?.status;
@@ -22,6 +24,8 @@ export function useSubmissions(campaignId: string) {
     return useQuery({
         queryKey: queryKeys.campaigns.submissions(campaignId),
         queryFn: async () => {
+            // Demo account in development: served from the browser (see mocks/devCampaignTabs.ts), no server call.
+            if (isDevDemoSession()) return demoListSubmissions(campaignId);
             const { data } = await http.get<ApiResponse<WorkSubmission[]>>(
                 API.campaigns.submissions.list(campaignId),
             );
@@ -58,6 +62,7 @@ export function useProofOfWorkSubmissions(campaignId: string) {
     return useQuery({
         queryKey: queryKeys.campaigns.proofOfWork(campaignId),
         queryFn: async () => {
+            if (isDevDemoSession()) return (await demoListProofOfWork(campaignId)) as any[];
             const { data } = await http.get<ApiResponse<unknown>>(
                 API.campaigns.submissions.proofOfWork(campaignId),
             );

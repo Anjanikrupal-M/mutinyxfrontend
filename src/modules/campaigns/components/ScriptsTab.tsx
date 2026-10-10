@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { FileText, Check, X, MessageSquare, Loader2, ChevronLeft, ChevronRight, Search, AlertTriangle, CheckCircle, MoreVertical, UserRoundX } from 'lucide-react';
+import { ArrowRight, FileText, Check, X, MessageSquare, Loader2, ChevronLeft, ChevronRight, Search, AlertTriangle, CheckCircle, MoreVertical, UserRoundX } from 'lucide-react';
 import http from '@/core/http';
 import { API } from '@/core/api';
 import { toast } from 'sonner';
@@ -452,21 +452,51 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                    <h2 className="text-lg font-semibold">Scripts</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">Share one link to let anyone review every script for this campaign.</p>
+            <div className="flex items-center justify-between gap-3 flex-wrap rounded-3xl border border-border bg-card p-4 shadow-card">
+                <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-black">
+                        <FileText className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                        <h2 className="font-display text-lg font-semibold leading-6 tracking-tight">Scripts</h2>
+                        <p className="text-xs text-muted-foreground">Share one link to let anyone review every script for this campaign.</p>
+                    </div>
                 </div>
+                {/* Where the scripts stand: waiting on you, approved, sent back. */}
+                {groups.length > 0 && (() => {
+                    const tally = { waiting: 0, approved: 0, revision: 0 };
+                    for (const group of groups) {
+                        const statuses = group.scriptVersions.map((sv: any) => String(sv.status ?? '').toLowerCase());
+                        if (statuses.includes('pending')) tally.waiting += 1;
+                        else if (statuses[0] === 'approved') tally.approved += 1;
+                        else tally.revision += 1;
+                    }
+                    return (
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                            <span className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold', tally.waiting > 0 ? 'bg-brand text-black' : 'bg-secondary text-muted-foreground')}>
+                                <span className="tabular-nums">{tally.waiting}</span> to review
+                            </span>
+                            <span className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-semibold text-foreground/80">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /><span className="tabular-nums">{tally.approved}</span> approved
+                            </span>
+                            {tally.revision > 0 && (
+                                <span className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-semibold text-foreground/80">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /><span className="tabular-nums">{tally.revision}</span> in revision
+                                </span>
+                            )}
+                        </div>
+                    );
+                })()}
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
                         onClick={handleDetectDuplicates}
                         disabled={latestScripts.length === 0}
                         className={cn(
-                            "flex items-center gap-1.5 px-4 h-9 rounded-lg border border-border bg-card text-xs font-bold transition-all shadow-sm",
+                            "flex items-center gap-1.5 px-4 h-9 rounded-full border border-border bg-card text-xs font-semibold transition-all duration-200 shadow-sm",
                             latestScripts.length === 0
                                 ? "opacity-50 cursor-not-allowed text-muted-foreground"
-                                : "hover:bg-secondary/40 text-foreground"
+                                : "hover:border-foreground text-foreground"
                         )}
                         title={latestScripts.length === 0 ? "No scripts have been submitted yet — detection disabled." : "Run AI duplicate detection analysis."}
                     >
@@ -486,11 +516,13 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
             {isLoading ? (
                 <ReviewCardsSkeleton />
             ) : latestScripts.length === 0 ? (
-                <div className="bg-card border border-border rounded-2xl min-h-[250px] p-12 text-center text-muted-foreground text-sm flex items-center justify-center">
-                    No scripts submitted yet.
+                <div className="flex min-h-[250px] flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-border bg-card p-12 text-center">
+                    <span className="grid h-12 w-12 place-items-center rounded-full bg-secondary text-muted-foreground"><FileText className="h-5 w-5" /></span>
+                    <p className="text-sm font-semibold">No scripts submitted yet</p>
+                    <p className="text-xs text-muted-foreground">Scripts show up here as creators send them in.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {groups.map((group) => {
                         // A pending script must never hide behind a newer approved one — for
                         // another item, or an older version of the same item still awaiting review.
@@ -517,14 +549,17 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                 key={group.influencerKey}
                                 type="button"
                                 onClick={() => openScriptModal(latestScript)}
-                                className="text-left bg-card border border-border hover:border-foreground/30 hover:shadow-md transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group"
+                                className={cn(
+                                    "text-left border rounded-2xl p-4 flex flex-col justify-between group shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card",
+                                    pendingScript ? "border-brand bg-brand/5 hover:border-foreground/40" : "border-border bg-card hover:border-foreground/20",
+                                )}
                             >
                                 <div>
                                     <div className="flex items-start justify-between gap-2 mb-3">
                                         <div className="flex items-center gap-2.5 min-w-0">
                                             <div 
                                                 onClick={(e) => { e.stopPropagation(); setQuickViewId(latestScript.influencerId); }}
-                                                className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-[#fedc03] transition-all"
+                                                className="w-10 h-10 rounded-full bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 cursor-pointer ring-2 ring-brand/40 ring-offset-1 ring-offset-card hover:ring-brand transition-all"
                                             >
                                                 {latestScript.influencerAvatar ? (
                                                     <ApiImage src={latestScript.influencerAvatar} alt={displayName} className="w-full h-full object-cover" />
@@ -549,22 +584,34 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                     {slots.length > 1 ? (
                                         <FormatSlotsList slots={slots} />
                                     ) : (
-                                        <div className="flex items-center gap-1.5 text-xs font-medium mb-1 uppercase tracking-wider text-muted-foreground">
-                                            <FileText className="w-3.5 h-3.5" />
+                                        <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-[11px] font-semibold text-foreground/75">
+                                            <FileText className="w-3 h-3" />
                                             <span>{itemDeliverableFormat(latestScript) ? slotItemLabel(latestScript, requiredSlots) : 'Script & concept'}</span>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="mt-3 pt-2.5 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
-                                    {countLabel ? (
-                                        <span className="inline-flex px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold lowercase tracking-normal">
-                                            {countLabel}
+                                <div className="mt-3 pt-3 border-t border-dashed border-border flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                                    <span className="flex min-w-0 items-center gap-2">
+                                        {countLabel && (
+                                            <span className="inline-flex shrink-0 px-2 py-0.5 rounded-full bg-foreground text-background text-[10px] font-bold lowercase tracking-normal">
+                                                {countLabel}
+                                            </span>
+                                        )}
+                                        <span className="truncate">
+                                            {new Date(latestScript.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                         </span>
-                                    ) : <span />}
-                                    <span>
-                                        Latest: {new Date(latestScript.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                     </span>
+                                    {/* Waiting on you: a clear call to action. Otherwise a quiet arrow. */}
+                                    {pendingScript ? (
+                                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-foreground py-1 pl-3 pr-2 text-[11px] font-semibold text-background transition-transform duration-200 group-hover:translate-x-0.5">
+                                            Review <ArrowRight className="h-3 w-3" />
+                                        </span>
+                                    ) : (
+                                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-foreground/60 transition-colors duration-200 group-hover:bg-foreground group-hover:text-brand">
+                                            <ArrowRight className="h-3.5 w-3.5" />
+                                        </span>
+                                    )}
                                 </div>
                             </button>
                         );

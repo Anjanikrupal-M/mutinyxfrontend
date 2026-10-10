@@ -1,6 +1,6 @@
 import { useParams, Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Users, FileText, Send, BarChart3, CheckCircle2, Clock, Kanban, LockKeyhole, Globe, Video, Smile, MessageSquare, Heart, MessageCircle, Share2, LucideIcon, TrendingUp, Trophy, Loader2, MoreVertical, Rocket, UserPlus, Sparkles, Award, Layers, Edit2, Link2, Ban, Copy, Check, X, MapPin, CalendarDays, CalendarClock, UserRound, Eye, Languages, Wallet, Percent } from 'lucide-react';
+import { ArrowLeft, Users, FileText, Send, BarChart3, CheckCircle2, Clock, Kanban, LockKeyhole, Globe, Video, Smile, MessageSquare, LucideIcon, TrendingUp, Loader2, MoreVertical, Rocket, UserPlus, Sparkles, Award, Layers, Edit2, Link2, Ban, Copy, Check, X, MapPin, CalendarDays, CalendarClock, UserRound, Eye, Languages, Wallet, Percent, UserCheck, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ApiImage } from '@/shared/components/ApiImage';
 import { CampaignStatusBadge } from '../components/CampaignStatusBadge';
@@ -60,10 +60,6 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 // IDs match CONTENT_FORMATS_BY_PLATFORM in CampaignBuilderPage.tsx
-const formatExactNumber = (value?: number | null) => {
-    const parsed = Number(value ?? 0);
-    return Number.isFinite(parsed) ? Math.round(parsed).toLocaleString('en-IN') : '0';
-};
 const CONTENT_TYPE_LABELS: Record<string, string> = {
     // Instagram
     reel: 'Reel',
@@ -778,185 +774,45 @@ export function OverviewTab({ campaign, influencers, isReadOnly }: { campaign: C
     };
 
     const budgetMode = campaign.budgetMode || campaign.budget?.mode || 'paid';
-    const isProductMode = budgetMode === 'product' || budgetMode === 'paid_product';
     const isProductOnlyCampaign = budgetMode === 'product';
     const isBrandProvidedScript = getSkipsCreatorScript(campaign);
 
-    const hasAnyStatus = (statuses: string[]) =>
-        safeInfluencers.some((ci) => statuses.includes(String(ci.status)));
-
-    // Payment is considered done once any influencer moves beyond plain "accepted"
-    // into payment/product/script/work pipeline or has a paid timestamp/status.
-    const paymentReceivedDone = safeInfluencers.some((ci) => {
-        const s = String(ci.status);
-        return (
-            [
-                'payment_pending',
-                'paid',
-                'product_pending',
-                'script_pending',
-                'script_review',
-                'work_pending',
-                'work_review',
-                'proof_review',
-                'completed',
-                'settled',
-            ].includes(s) ||
-            !!(ci as any).paidAt ||
-            ci.paymentStatus === 'first_paid' ||
-            ci.paymentStatus === 'completed'
-        );
-    });
-
-    // Product delivery is considered done once influencer confirms receipt
-    // OR flow has moved to script/work/completed states.
-    const productDeliveryDone = safeInfluencers.some((ci) => {
-        const s = String(ci.status);
-        return (
-            [
-                'script_pending',
-                'script_review',
-                'work_pending',
-                'work_review',
-                'proof_review',
-                'completed',
-                'settled',
-            ].includes(s) ||
-            !!(ci as any).productReceivedAt ||
-            !!ci.productReceived ||
-            !!ci.proofOfDelivery
-        );
-    });
-
-    const basePipelineSteps = [
-        { label: 'Campaign Created', done: true },
-        { label: 'Receiving Applications', done: campaign.applicationsCount > 0 || (!isDeadlinePassed(campaign.applicationDeadline) && campaign.status !== 'draft' && campaign.status !== 'withdrawn') },
-        { label: 'Influencers Accepted', done: campaign.creatorsAccepted > 0 },
-        ...(!isProductOnlyCampaign ? [{ label: 'Payment Received', done: paymentReceivedDone }] : []),
-    ];
-
-    const productStep = isProductMode ? [
-        { label: 'Product Delivery', done: productDeliveryDone },
-    ] : [];
-
-    const displayStatus = getCampaignDisplayStatus(campaign);
-
-    const workSteps = [
-        ...(!isBrandProvidedScript
-            ? [{ label: 'Scripts In Progress', done: hasAnyStatus(['script_pending', 'script_review', 'work_pending', 'work_review', 'proof_review', 'completed', 'settled']) }]
-            : []),
-        { label: 'Work In Progress', done: hasAnyStatus(['work_pending', 'work_review', 'proof_review', 'completed', 'settled']) },
-        ...(campaign.proofOfWorkRequired || campaign.proofOfWorkReq
-            ? [{ label: 'Proof of Work Review', done: hasAnyStatus(['proof_review', 'completed', 'settled']) }]
-            : []),
-        { label: 'Campaign Completed', done: displayStatus === 'completed' || displayStatus === 'closed' },
-    ];
-
-    const pipelineSteps = [...basePipelineSteps, ...productStep, ...workSteps];
-    const computedProgress = Math.round((pipelineSteps.filter((s) => s.done).length / pipelineSteps.length) * 100);
     const formattedApplicationDeadline = formatDateFromDb(campaign.applicationDeadline);
+    const inProgressCount = statusCounts.scriptPending + statusCounts.scriptReview + statusCounts.workPending + statusCounts.workReview + statusCounts.proofReview;
+    // Where the accepted creators are right now; each bar is measured against the busiest stage.
+    const influencerStages = [
+        ...(!isBrandProvidedScript
+            ? [
+                { label: 'Script pending', count: statusCounts.scriptPending },
+                { label: 'Script review', count: statusCounts.scriptReview },
+            ]
+            : []),
+        { label: 'Work pending', count: statusCounts.workPending },
+        { label: 'Work review', count: statusCounts.workReview },
+        ...((campaign.proofOfWorkRequired || campaign.proofOfWorkReq) ? [{ label: 'Proof review', count: statusCounts.proofReview }] : []),
+        { label: 'Completed', count: statusCounts.completed },
+    ];
+    const busiestStage = Math.max(1, ...influencerStages.map((stage) => stage.count));
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px] gap-4 sm:gap-6">
-            <div className="space-y-4 sm:space-y-6 min-w-0">
-                {/* Stats Row */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
-                    <MiniStat label="Applications" value={campaign.applicationsCount} />
-                    <MiniStat label="Accepted" value={campaign.creatorsAccepted} />
-                    <MiniStat label="In Progress" value={statusCounts.scriptPending + statusCounts.scriptReview + statusCounts.workPending + statusCounts.workReview + statusCounts.proofReview} />
-                    <MiniStat label="Completed" value={statusCounts.completed} />
-                </div>
+        <div className="space-y-4 sm:space-y-5">
+            {/* The four counts, in the dashboard's stat-card style */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                <OverviewStat icon={Users} label="Applications" hint="Creators who applied" value={campaign.applicationsCount} />
+                <OverviewStat icon={UserCheck} label="Accepted" hint="On the campaign" value={campaign.creatorsAccepted} />
+                <OverviewStat icon={Activity} label="In progress" hint="Scripts and work under way" value={inProgressCount} />
+                <OverviewStat icon={CheckCircle2} label="Completed" hint="Finished their work" value={statusCounts.completed} />
+            </div>
 
-                {/* Campaign Performance */}
-                {campaign.analytics && (
-                    <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                            <TrendingUp className="w-4 h-4 text-[#fedc03]" />
-                            <h3 className="text-sm font-semibold">Campaign Performance</h3>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
-                            <PerformanceStat
-                                label="Total Reach"
-                                value={formatExactNumber(campaign.analytics.totalReach)}
-                                icon={Globe}
-                            />
-                            <PerformanceStat
-                                label="Engagement"
-                                value={`${campaign.analytics.engagementRate}%`}
-                                icon={BarChart3}
-                            />
-                            <PerformanceStat
-                                label="Total Likes"
-                                value={formatExactNumber(campaign.analytics.totalLikes)}
-                                icon={Heart}
-                            />
-                            <PerformanceStat
-                                label="Comments"
-                                value={formatExactNumber(campaign.analytics.totalComments)}
-                                icon={MessageCircle}
-                            />
-                            <PerformanceStat
-                                label="Total Shared"
-                                value={formatExactNumber(campaign.analytics.totalShares)}
-                                icon={Share2}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* Top Performers */}
-                {campaign.topPerformers && campaign.topPerformers.length > 0 && (
-                    <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Trophy className="w-4 h-4 text-[#fedc03]" />
-                            <h3 className="text-sm font-semibold">Top Performers</h3>
-                        </div>
-                        <div className="space-y-3">
-                            {campaign.topPerformers.map((performer) => (
-                                <div key={performer.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 border border-border/50">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-[#fedc03] flex items-center justify-center text-black font-bold text-xs">
-                                            {performer.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">{performer.name}</p>
-                                            <p className="text-xs text-muted-foreground">{performer.handle}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-6">
-                                        <div className="text-right">
-                                            <p className="text-xs text-muted-foreground">Reach</p>
-                                            <p className="text-sm font-semibold">
-                                                {formatExactNumber(performer.reach)}
-                                            </p>
-                                        </div>
-                                        <div className="text-right min-w-[70px]">
-                                            <p className="text-xs text-muted-foreground">Engagement</p>
-                                            <p className="text-sm font-semibold text-emerald-500">{performer.engagement}%</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Progress */}
-                <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                    <h3 className="text-sm font-semibold mb-3">Campaign Progress</h3>
-                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden mb-2">
-                        <div className="h-full bg-[#fedc03] rounded-full" style={{ width: `${computedProgress}%` }} />
-                    </div>
-                    <p className="text-sm text-muted-foreground">{computedProgress}% complete</p>
-                </div>
-
+            <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0 space-y-4 sm:space-y-5">
                 {/* Details — brief on top, facts as a tile grid, lists as chips; nothing stretches
                     a label and its value to opposite edges of a wide card. */}
-                <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-5">
-                    <h3 className="text-sm font-semibold">Details</h3>
+                <OverviewCard icon={FileText} title="Details" description="The brief and the terms creators see.">
+                    <div className="space-y-5">
 
                     {campaign.brief && (
-                        <div className="rounded-xl bg-secondary/40 px-4 py-3.5">
+                        <div className="rounded-2xl border-l-[3px] border-brand bg-secondary/40 px-4 py-3.5">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Brief</p>
                             <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{campaign.brief}</p>
                         </div>
@@ -1009,7 +865,7 @@ export function OverviewTab({ campaign, influencers, isReadOnly }: { campaign: C
                                 {tiers.length > 0 && (
                                     <DetailChips label="Tier pricing">
                                         {tiers.map((tp) => (
-                                            <span key={tp.tier} className="rounded-full bg-[#fedc03]/15 px-2.5 py-1 text-xs">
+                                            <span key={tp.tier} className="rounded-full bg-brand/15 px-2.5 py-1 text-xs">
                                                 <span className="capitalize font-medium">{tp.tier}</span> <span className="font-semibold tabular-nums">₹{(tp.amount ?? 0).toLocaleString('en-IN')}</span>
                                             </span>
                                         ))}
@@ -1032,7 +888,7 @@ export function OverviewTab({ campaign, influencers, isReadOnly }: { campaign: C
                         if (ages.length === 0 && !gender && locations.length === 0 && languages.length === 0) return null;
                         const chip = 'rounded-full border border-border px-2.5 py-1 text-xs font-medium [overflow-wrap:anywhere]';
                         return (
-                            <div className="rounded-xl border border-border/70 px-4 py-3.5">
+                            <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3.5">
                                 <p className="mb-3 text-sm font-semibold">Target audience</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <DetailChips label="Age">
@@ -1076,7 +932,7 @@ export function OverviewTab({ campaign, influencers, isReadOnly }: { campaign: C
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
                                 {campaign.visitAtSite.options.map((loc, idx) => (
-                                    <div key={loc.id || idx} className="rounded-xl border border-border/70 p-3">
+                                    <div key={loc.id || idx} className="rounded-2xl border border-border bg-secondary/40 p-3">
                                         {campaign.visitAtSite!.options.length > 1 && (
                                             <p className="font-semibold text-xs mb-1">Location {idx + 1}</p>
                                         )}
@@ -1086,52 +942,29 @@ export function OverviewTab({ campaign, influencers, isReadOnly }: { campaign: C
                             </div>
                         </div>
                     )}
-                </div>
+                    </div>
+                </OverviewCard>
             </div>
 
-            {/* Right sidebar — pipeline & influencer status. Fixed sleek width so it never becomes too wide. */}
-            <div className="flex flex-col gap-4 sm:gap-6">
-                <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-1 shadow-sm">
-                    <h3 className="text-base font-semibold mb-4">Pipeline Status</h3>
-                    <div className="flex flex-col gap-3.5 lg:flex-1 lg:justify-evenly">
-                        {pipelineSteps.map((item, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className={cn('w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs', item.done ? 'bg-[#fedc03]' : 'bg-secondary')}>
-                                    {item.done ? <CheckCircle2 className="w-4 h-4 text-black" /> : <Clock className="w-3.5 h-3.5 text-muted-foreground" />}
-                                </div>
-                                <span className={cn('text-sm', item.done ? 'text-foreground font-semibold' : 'text-muted-foreground')}>{item.label}</span>
-                            </div>
+            {/* Right column — where the accepted creators are. */}
+            <div className="flex flex-col gap-4 sm:gap-5">
+                <OverviewCard icon={Users} title="Influencer status" description="Where your accepted creators are.">
+                    <ul className="space-y-3">
+                        {influencerStages.map((stage) => (
+                            <li key={stage.label}>
+                                <span className="flex items-baseline justify-between gap-2 text-sm">
+                                    <span className={cn(stage.count > 0 ? 'font-medium text-foreground' : 'text-muted-foreground')}>{stage.label}</span>
+                                    <span className={cn('font-display font-semibold tabular-nums', stage.count === 0 && 'text-muted-foreground/60')}>{stage.count}</span>
+                                </span>
+                                <svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
+                                    <rect width="100" height="6" className="fill-foreground/10" />
+                                    <rect width={(stage.count / busiestStage) * 100} height="6" className="fill-brand" />
+                                </svg>
+                            </li>
                         ))}
-                    </div>
-                </div>
-
-                {/* Quick status counts with clear, legible text and badges */}
-                <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-1 shadow-sm">
-                    <h3 className="text-base font-semibold mb-3.5">Influencer Status</h3>
-                    <div className="flex flex-col gap-2.5 lg:flex-1 lg:justify-evenly">
-                        {[
-                            ...(!isBrandProvidedScript
-                                ? [
-                                    { label: 'Script Pending', count: statusCounts.scriptPending, color: 'bg-violet-500' },
-                                    { label: 'Script Review', count: statusCounts.scriptReview, color: 'bg-purple-500' },
-                                ]
-                                : []),
-                            { label: 'Work Pending', count: statusCounts.workPending, color: 'bg-indigo-500' },
-                            { label: 'Work Review', count: statusCounts.workReview, color: 'bg-cyan-500' },
-                            ...((campaign.proofOfWorkRequired || campaign.proofOfWorkReq)
-                                ? [{ label: 'Proof Review', count: statusCounts.proofReview, color: 'bg-sky-500' }]
-                                : []),
-                            { label: 'Completed', count: statusCounts.completed, color: 'bg-emerald-500' },
-                        ].map((s) => (
-                            <div key={s.label} className="flex items-center justify-between py-1">
-                                <div className="flex items-center gap-2.5">
-                                    <span className="text-sm font-medium text-foreground/85">{s.label}</span>
-                                </div>
-                                <span className="text-xs font-bold tabular-nums bg-secondary/80 px-2.5 py-0.5 rounded-md border border-border/60">{s.count}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                    </ul>
+                </OverviewCard>
+            </div>
             </div>
         </div>
     );
@@ -1173,30 +1006,45 @@ function BrandScriptBlock({ campaign }: { campaign: Campaign }) {
     );
 }
 
-function PerformanceStat({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
+/** Card shell for the Overview tab: yellow icon bead, title, one line of explanation. */
+function OverviewCard({ icon: Icon, title, description, aside, children }: { icon: LucideIcon; title: string; description?: string; aside?: React.ReactNode; children: React.ReactNode }) {
     return (
-        <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Icon className="w-3.5 h-3.5" />
-                <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
-            </div>
-            <p className="text-lg font-bold font-display">{value}</p>
-        </div>
+        <section className="rounded-3xl border border-border bg-card p-4 shadow-card sm:p-5">
+            <header className="mb-4 flex items-center gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-black">
+                    <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-base font-semibold leading-5 tracking-tight">{title}</span>
+                    {description && <span className="block truncate text-xs leading-[18px] text-muted-foreground">{description}</span>}
+                </span>
+                {aside}
+            </header>
+            {children}
+        </section>
     );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+/** One of the four counts at the top — a compact take on the dashboard's stat card: yellow-tinted, icon tile and label on the left, the number on the right. */
+function OverviewStat({ icon: Icon, label, hint, value }: { icon: LucideIcon; label: string; hint: string; value: number }) {
     return (
-        <div className="bg-card border border-border rounded-2xl p-4">
-            <p className="text-2xl font-bold font-display">{value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+        <div className="relative flex items-center gap-2.5 overflow-hidden rounded-2xl border border-brand/30 bg-card bg-gradient-to-br from-brand/10 via-brand/[0.04] to-brand/25 px-3 py-2.5 shadow-card">
+            <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-brand/30 blur-3xl" />
+            <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand text-black">
+                <Icon className="h-3.5 w-3.5" />
+            </span>
+            <span className="relative min-w-0 flex-1">
+                <span className="block truncate text-xs font-semibold leading-4">{label}</span>
+                <span className="block truncate text-[11px] leading-4 text-muted-foreground">{hint}</span>
+            </span>
+            <span className="relative shrink-0 font-display text-2xl font-semibold leading-none tracking-tight tabular-nums">{value}</span>
         </div>
     );
 }
 
 function DetailFact({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
     return (
-        <div className="min-w-0 rounded-xl border border-border/70 px-3.5 py-3">
+        <div className="min-w-0 rounded-2xl border border-border bg-secondary/40 px-3.5 py-3">
             <dt className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                 <Icon className="w-3.5 h-3.5 shrink-0" />
                 {label}

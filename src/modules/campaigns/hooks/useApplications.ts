@@ -9,6 +9,8 @@ import { queryKeys } from '@/core/queryKeys';
 import type { ApiResponse } from '@/core/types';
 import type { CampaignInfluencer } from '@/shared/types/campaign';
 import ws from '@/core/websocket';
+import { isDevDemoSession } from '@/mocks/devCampaigns';
+import { demoListApplications } from '@/mocks/devCampaignTabs';
 
 const shouldRetryQuery = (failureCount: number, error: unknown) => {
     const status = (error as { response?: { status?: number } })?.response?.status;
@@ -74,7 +76,8 @@ async function fetchAllPages(url: string): Promise<CampaignInfluencer[]> {
 export function useApplications(campaignId: string) {
     return useQuery({
         queryKey: queryKeys.campaigns.applications(campaignId),
-        queryFn: () => fetchAllPages(API.campaigns.applications.list(campaignId)),
+        // Demo account in development: served from the browser (see mocks/devCampaignTabs.ts), no server call.
+        queryFn: () => (isDevDemoSession() ? demoListApplications(campaignId) : fetchAllPages(API.campaigns.applications.list(campaignId))),
         enabled: !!campaignId,
         placeholderData: keepPreviousData,
         retry: shouldRetryQuery,
@@ -88,7 +91,7 @@ export function useApplications(campaignId: string) {
 export function useStatusBoardApplications(campaignId: string) {
     return useQuery({
         queryKey: queryKeys.campaigns.statusBoard(campaignId),
-        queryFn: () => fetchAllPages(API.campaigns.applications.statusBoard(campaignId)),
+        queryFn: () => (isDevDemoSession() ? demoListApplications(campaignId) : fetchAllPages(API.campaigns.applications.statusBoard(campaignId))),
         enabled: !!campaignId,
         retry: shouldRetryQuery,
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),

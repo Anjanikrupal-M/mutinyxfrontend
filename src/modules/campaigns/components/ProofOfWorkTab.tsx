@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Award, Check, ChevronLeft, ChevronRight, Clock, Link as LinkIcon, Loader2, MessageSquare, Send, Upload, X, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Award, Check, ChevronLeft, ChevronRight, Clock, ExternalLink, Info, Instagram, Link as LinkIcon, Loader2, MessageSquare, Send, Upload, X, RefreshCw, Youtube } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -177,16 +177,20 @@ function StoryLifecycleMessage({ proof }: { proof: ProofOfWorkSubmission }) {
 
 type ProofPlatform = 'instagram' | 'youtube';
 
-const PLATFORM_META: Record<ProofPlatform, { label: string; icon: typeof InstagramIcon; badgeClass: string }> = {
+const PLATFORM_META: Record<ProofPlatform, { label: string; icon: typeof InstagramIcon; badgeClass: string; glyph: typeof Instagram; glyphClass: string }> = {
   instagram: {
     label: 'Instagram',
     icon: InstagramIcon,
     badgeClass: 'bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400 border-fuchsia-500/25',
+    glyph: Instagram,
+    glyphClass: 'text-pink-600',
   },
   youtube: {
     label: 'YouTube',
     icon: YoutubeIcon,
     badgeClass: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/25',
+    glyph: Youtube,
+    glyphClass: 'text-red-600',
   },
 };
 
@@ -208,17 +212,17 @@ const resolveProofPlatform = (proof: Pick<ProofOfWorkSubmission, 'platform' | 'p
 function PlatformBadge({ platform, className }: { platform: ProofPlatform | null; className?: string }) {
   if (!platform) {
     return (
-      <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-border bg-secondary text-muted-foreground text-[10px] font-bold', className)}>
+      <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-border bg-card text-muted-foreground text-[11px] font-semibold', className)}>
         <LinkIcon className="w-3 h-3" />
         Proof Link
       </span>
     );
   }
 
-  const { label, icon: Icon, badgeClass } = PLATFORM_META[platform];
+  const { label, glyph: Glyph, glyphClass } = PLATFORM_META[platform];
   return (
-    <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold', badgeClass, className)}>
-      <Icon className="w-3 h-3 shrink-0" />
+    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-border bg-card text-[11px] font-semibold text-foreground', className)}>
+      <Glyph className={cn('w-3 h-3 shrink-0', glyphClass)} strokeWidth={2.25} />
       {label}
     </span>
   );
@@ -464,11 +468,30 @@ export function ProofOfWorkTab({ campaign, submissions: initialSubmissions, isRe
   return (
     <div className={cn("grid grid-cols-1 gap-4 sm:gap-6", !isReadOnly && "lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]")}>
       <div className="space-y-4 min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-          <div>
-            <h2 className="text-lg font-bold font-display tracking-tight">Proof of Work</h2>
-            <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">Share one link to let anyone review every proof submission for this campaign.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-border bg-card p-4 shadow-card">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-black">
+              <Award className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-display text-lg font-semibold leading-6 tracking-tight">Proof of Work</h2>
+              <p className="text-xs text-muted-foreground">Share one link to let anyone review every proof submission for this campaign.</p>
+            </div>
           </div>
+          {/* Where the proofs stand: waiting on you, approved. */}
+          {groups.length > 0 && (() => {
+            const waiting = groups.filter((group) => group.proofs.some((proof) => proof.status === 'pending')).length;
+            return (
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold', waiting > 0 ? 'bg-brand text-black' : 'bg-secondary text-muted-foreground')}>
+                  <span className="tabular-nums">{waiting}</span> to review
+                </span>
+                <span className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-semibold text-foreground/80">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /><span className="tabular-nums">{groups.length - waiting}</span> approved
+                </span>
+              </div>
+            );
+          })()}
           {!isReadOnly && (
             <CopyBulkReviewLinkButton
               kind="proof"
@@ -478,13 +501,15 @@ export function ProofOfWorkTab({ campaign, submissions: initialSubmissions, isRe
             />
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {groups.map((group) => {
             const latestProof = preferredReviewItem(group.proofs, requiredSlots) ?? group.proofs[0];
             if (!latestProof) return null;
             const slots = formatSlotsFromItems(requiredSlots, group.proofs);
             const countLabel = formatCountLabel(group.proofs.length, slots);
             const cardStatus = aggregateFormatCardStatus(slots) ?? submissionDisplayStatus(latestProof.status);
+            // Waiting on the brand: yellow outline, like Scripts and Work Submissions.
+            const isWaiting = group.proofs.some((proof) => proof.status === 'pending');
 
             return (
               <div
@@ -498,7 +523,10 @@ export function ProofOfWorkTab({ campaign, submissions: initialSubmissions, isRe
                     openProofModal(latestProof);
                   }
                 }}
-                className="text-left bg-card border border-border hover:border-foreground/30 hover:shadow-md transition-all duration-300 rounded-2xl p-4 flex flex-col justify-between group cursor-pointer"
+                className={cn(
+                  "text-left border rounded-2xl p-4 flex flex-col justify-between group cursor-pointer shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card",
+                  isWaiting ? "border-brand bg-brand/5 hover:border-foreground/40" : "border-border bg-card hover:border-foreground/20",
+                )}
               >
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2 min-w-0">
@@ -507,7 +535,7 @@ export function ProofOfWorkTab({ campaign, submissions: initialSubmissions, isRe
                         e.stopPropagation();
                         setQuickViewId(latestProof.influencerId);
                       }}
-                      className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-[#fedc03] transition-all"
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 cursor-pointer ring-2 ring-brand/40 ring-offset-1 ring-offset-card hover:ring-brand transition-all"
                     >
                       {latestProof.influencerAvatar ? (
                         <ApiImage src={latestProof.influencerAvatar} alt={latestProof.influencerName} className="w-full h-full object-cover" />
@@ -537,33 +565,31 @@ export function ProofOfWorkTab({ campaign, submissions: initialSubmissions, isRe
                   {group.platforms.map((platform) => (
                     <PlatformBadge key={platform ?? 'other'} platform={platform} />
                   ))}
-                </div>
-                {slots.length > 1 ? (
-                  <FormatSlotsList slots={slots} />
-                ) : (
-                  <div className="flex items-center justify-between gap-2 text-xs font-medium mb-1 uppercase tracking-wider text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
+                  {slots.length <= 1 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-2.5 py-0.5 text-[11px] font-semibold text-foreground/75">
                       <LinkIcon className="w-3 h-3" />
                       {slotItemLabel(latestProof, requiredSlots)}
-                    </div>
-                  </div>
-                )}
-                {countLabel && (
-                  <span className="mt-1 inline-flex px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold lowercase tracking-normal">
-                    {countLabel}
-                  </span>
-                )}
+                    </span>
+                  )}
+                  {countLabel && (
+                    <span className="inline-flex px-2 py-0.5 rounded-full bg-foreground text-background text-[10px] font-bold lowercase tracking-normal">
+                      {countLabel}
+                    </span>
+                  )}
+                </div>
+                {slots.length > 1 && <FormatSlotsList slots={slots} />}
 
-                <p className="text-[11px] text-muted-foreground truncate break-all">
-                  {latestProof.proofUrl}
+                <p className="flex min-w-0 items-center gap-1.5 rounded-xl bg-secondary/50 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+                  <ExternalLink className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{latestProof.proofUrl}</span>
                 </p>
                 {isStoryProof(latestProof) && (
                   <div className="mt-1.5"><StoryLifecycleMessage proof={latestProof} /></div>
                 )}
 
-                <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <p className="text-[10px] text-muted-foreground">
-                    Latest: {new Date(latestProof.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                <div className="mt-3 pt-3 border-t border-dashed border-border flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(latestProof.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                   {!isReadOnly && latestProof.status === 'pending' && (
                     <button
@@ -573,11 +599,18 @@ export function ProofOfWorkTab({ campaign, submissions: initialSubmissions, isRe
                         void approveMutation.mutateAsync(latestProof.id);
                       }}
                       disabled={approveMutation.isPending || rejectMutation.isPending}
-                      className="inline-flex h-9 w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                      className="group/approve inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-brand bg-brand/20 pl-1 pr-3 text-xs font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand hover:shadow-card active:translate-y-0 active:scale-[0.97] disabled:opacity-50"
                     >
-                      {approveMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      <span className="grid h-6 w-6 place-items-center rounded-full bg-card shadow-sm transition-transform duration-200 group-hover/approve:scale-110">
+                        {approveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" strokeWidth={3} />}
+                      </span>
                       Approve {slotItemLabel(latestProof, requiredSlots)}
                     </button>
+                  )}
+                  {(isReadOnly || latestProof.status !== 'pending') && (
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-secondary text-foreground/60 transition-colors duration-200 group-hover:bg-foreground group-hover:text-brand">
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
                   )}
                 </div>
               </div>
@@ -588,26 +621,42 @@ export function ProofOfWorkTab({ campaign, submissions: initialSubmissions, isRe
 
       {!isReadOnly && (
         <div className="space-y-4">
-          <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:sticky lg:top-20">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">Proof of Work</h3>
+          <div className="relative overflow-hidden rounded-3xl border border-brand/30 bg-card bg-gradient-to-br from-brand/10 via-brand/[0.04] to-brand/25 p-4 sm:p-5 shadow-card lg:sticky lg:top-20">
+            <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
+            <div className="relative flex items-center justify-between mb-4">
+              <h3 className="flex items-center gap-2.5 font-display text-base font-semibold tracking-tight">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-brand text-black"><Info className="h-4 w-4" /></span>
+                How it works
+              </h3>
               <button
                 onClick={() => {
                   queryClient.invalidateQueries({ queryKey: queryKeys.campaigns.proofOfWork(campaign.id) });
                   queryClient.invalidateQueries({ queryKey: queryKeys.campaigns.detail(campaign.id) });
                   toast.success('Refreshed proof of work submissions');
                 }}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:border-foreground hover:text-foreground"
                 title="Refresh submissions"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
-            <div className="text-xs text-muted-foreground space-y-2">
-              <p>Creators share proof links here to verify their work went live. Approving every required format marks the creator's campaign complete.</p>
-              <p>Final payment is collected in the Work Submissions tab once work is approved.</p>
-              <p className="text-foreground/80">Campaign budget: {formatTierPricing()}</p>
-            </div>
+            {/* The three facts as numbered steps, like the builder's stepper. */}
+            <ol className="relative space-y-3 text-xs text-muted-foreground">
+              {[
+                'Creators post their content and share the live link here.',
+                "Approve every required format to mark the creator's campaign complete.",
+                'Final payment is collected in the Work Submissions tab once work is approved.',
+              ].map((step, i) => (
+                <li key={step} className="flex gap-2.5">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-bold text-brand">{i + 1}</span>
+                  <span className="leading-5">{step}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="relative mt-4 flex items-baseline justify-between gap-2 rounded-2xl border border-border bg-card px-3 py-2.5 text-xs shadow-sm">
+              <span className="text-muted-foreground">Campaign budget</span>
+              <span className="font-semibold tabular-nums">{formatTierPricing()}</span>
+            </p>
           </div>
         </div>
       )}

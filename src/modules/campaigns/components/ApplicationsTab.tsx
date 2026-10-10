@@ -41,12 +41,13 @@ import type { PaymentRoundSummary } from '../hooks/usePayments';
 import { DEFAULT_PLATFORM_FEE_PERCENT } from '@/shared/constants/platform';
 import { computeBrandFit, canScoreBrandFit, type BrandFitResult } from '@/shared/utils/brandFit';
 import { audienceMatchShare, hasAudienceTarget } from '@/shared/utils/audienceMatch';
-import { BrandFitRing } from '@/shared/components/BrandFitRing';
+import { computeCampaignFit } from '@/shared/utils/campaignFit';
+import { CampaignFitRing } from '@/shared/components/CampaignFitRing';
 import { deriveTier, isTierEligible, type CampaignTierInput } from '@/shared/utils/tierHelper';
 
 const CHAT_LOCKED_TOOLTIP = 'Chat unlocks when this creator reaches Script or Work stage.';
 
-import { PLATFORM_ICONS } from '@/shared/components/SocialIcons';
+import { Instagram, Youtube, Twitter, type LucideIcon } from 'lucide-react';
 import { PlatformFollowerStats } from '@/shared/components/PlatformFollowerStats';
 import { getPlatformFollowerEntries } from '@/shared/utils/platformStats';
 import { estimateCreatorReach } from '@/shared/utils/estimatedReach';
@@ -90,6 +91,14 @@ const ATTENTION_MAX_RANK = 5;
 
 // Indian notation, mirroring compactCount in AnalyticsTab — a 51 lakh follower total must
 // not push the tile beside it off its line.
+/** Line glyphs for the platform bead on an applicant card. */
+const CARD_PLATFORM_GLYPHS: Record<string, LucideIcon> = {
+    instagram: Instagram,
+    youtube: Youtube,
+    twitter: Twitter,
+    x: Twitter,
+};
+
 function formatCompactNumber(value: number): string {
     if (value >= 1e7) return `${Number((value / 1e7).toFixed(2))} Cr`;
     if (value >= 1e5) return `${Number((value / 1e5).toFixed(2))} L`;
@@ -157,7 +166,7 @@ function ApplicationCounterButton({
                     setCounterNote('');
                 }}
                 disabled={counterOffer.isPending}
-                className="px-3 py-2 text-xs font-semibold rounded-lg border border-border hover:bg-secondary transition-premium disabled:opacity-60"
+                className="h-8 px-3 text-xs font-semibold rounded-full border border-border transition-colors hover:border-foreground disabled:opacity-60"
             >
                 Counter
             </button>
@@ -2145,12 +2154,12 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                     };
 
                     return (
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
                             <div className="flex w-full sm:w-auto items-center gap-2 sm:gap-3 flex-wrap">
                                 {appliedInfluencers.length > 0 && (
                                     <button
                                         onClick={toggleSelectAllApplied}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-premium"
+                                        className="flex items-center gap-2 h-9 px-4 rounded-full border border-border bg-card text-xs font-semibold text-foreground/80 shadow-sm transition-all duration-200 hover:border-foreground hover:text-foreground"
                                     >
                                         {selectedAppliedCount > 0
                                             ? <CheckSquare className="w-3.5 h-3.5" />
@@ -2164,7 +2173,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                     <button
                                         onClick={openBulkAccept}
                                         disabled={approveApplication.isPending || isBulkAccepting}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500 text-emerald-600 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-premium disabled:opacity-60"
+                                        className="flex items-center gap-2 h-9 px-4 rounded-full bg-emerald-600 text-white text-xs font-semibold shadow-sm transition-all duration-200 hover:bg-emerald-700 hover:shadow-float disabled:opacity-60"
                                     >
                                         <CheckCircle2 className="w-3.5 h-3.5" />
                                         Accept {selectedAppliedCount} & Send MOU
@@ -2174,7 +2183,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                 {!isPayLater && selectableInfluencers.length > 0 && (
                                     <button
                                         onClick={selectAll}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-premium"
+                                        className="flex items-center gap-2 h-9 px-4 rounded-full border border-border bg-card text-xs font-semibold text-foreground/80 shadow-sm transition-all duration-200 hover:border-foreground hover:text-foreground"
                                     >
                                         {selected.size > 0
                                             ? <CheckSquare className="w-3.5 h-3.5" />
@@ -2187,25 +2196,28 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                 <button
                                     onClick={handleSmartSelect}
                                     disabled={isAnalyzing || smartSelectCandidates.length === 0}
+                                    // The page's main action: the app's black pill with a yellow icon that floods on hover.
                                     className={cn(
-                                        "flex items-center gap-2 px-4 py-2 rounded-xl text-black text-xs font-bold transition-all duration-500 group shadow-md border",
+                                        "flood-btn group flex h-9 items-center gap-2 rounded-full pl-1 pr-4 text-xs font-semibold shadow-sm duration-300",
                                         isAnalyzing
-                                            ? "bg-secondary border-border cursor-not-allowed opacity-80"
-                                            : "bg-linear-to-r from-[#fedc03] via-[#fee74d] to-[#fedc03] hover:shadow-[0_0_20px_rgba(254,220,3,0.4)] border-[#fedc03]/20"
+                                            ? "bg-secondary text-muted-foreground cursor-not-allowed"
+                                            : "bg-foreground text-background hover:shadow-float"
                                     )}
                                 >
-                                    {isAnalyzing ? (
-                                        <RefreshCcw className="w-4 h-4 animate-spin text-muted-foreground" />
-                                    ) : (
-                                        <Sparkles className="w-4 h-4 fill-black/10 group-hover:scale-110 transition-transform" />
-                                    )}
-                                    {isAnalyzing ? "AI Analyzing..." : "Smart Select"}
+                                    <span className="flood-btn-icon grid h-7 w-7 place-items-center rounded-full bg-brand text-black">
+                                        {isAnalyzing ? (
+                                            <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                            <Sparkles className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+                                        )}
+                                    </span>
+                                    <span className="flood-btn-label">{isAnalyzing ? "AI Analyzing..." : "Smart Select"}</span>
                                 </button>
 
                                 {!isAnalyzing && bulkRecommendedIds.length > 0 && (
                                     <button
                                         onClick={recommendedAllSelected ? clearSelection : selectRecommended}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#fedc03] text-xs font-semibold hover:bg-[#fedc03]/10 transition-premium"
+                                        className="flex items-center gap-2 h-9 px-4 rounded-full border border-brand bg-brand/10 text-xs font-semibold transition-colors hover:bg-brand/25"
                                         title={recommendedAllSelected ? 'Untick every selected creator.' : 'Tick the recommended creators. You still confirm Accept or Pay.'}
                                     >
                                         {recommendedAllSelected ? <Square className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
@@ -2231,7 +2243,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                 )}
                             </div>
                             {selected.size === 0 && (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold tabular-nums text-muted-foreground">
                                     {visibleInfluencers.length} influencer{visibleInfluencers.length !== 1 ? 's' : ''}
                                 </span>
                             )}
@@ -2247,8 +2259,8 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                     const pick = influencers.find((i) => i.id === topPick.influencerId);
                     if (!pick) return null;
                     return (
-                        <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-border border-l-[3px] border-l-[#fedc03] bg-card px-3.5 py-2.5 animate-in fade-in">
-                            <Trophy className="w-4 h-4 text-[#a07c00] shrink-0 mt-0.5" />
+                        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-brand/40 bg-brand/10 px-3.5 py-3 animate-in fade-in">
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-black"><Trophy className="w-3.5 h-3.5" /></span>
                             <div className="min-w-0 text-xs leading-relaxed text-foreground">
                                 <p>
                                     <span className="font-bold">Best pick: {pick.name}</span>
@@ -2327,12 +2339,12 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                             type="button"
                             onClick={() => setShowInterested((prev) => !prev)}
                             className={cn(
-                                "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 shadow-sm cursor-pointer border",
+                                "inline-flex h-9 items-center gap-2 px-4 rounded-full text-xs font-semibold transition-all duration-200 shadow-sm cursor-pointer border",
                                 showInterested
-                                    ? "bg-foreground text-background border-foreground hover:opacity-90"
+                                    ? "bg-foreground text-background border-foreground hover:shadow-float"
                                     : interestedInfluencers.length > 0
-                                        ? "bg-linear-to-r from-[#fedc03] via-[#fee74d] to-[#fedc03] text-black border-[#fedc03] hover:shadow-[0_0_16px_rgba(254,220,3,0.45)] hover:scale-[1.01]"
-                                        : "bg-secondary text-foreground border-border hover:bg-secondary/80"
+                                        ? "bg-brand/15 text-foreground border-brand hover:bg-brand/30"
+                                        : "bg-card text-foreground/80 border-border hover:border-foreground"
                             )}
                         >
                             <Users className="w-4 h-4" />
@@ -2363,23 +2375,23 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                 )}
 
                 {influencers.length === 0 ? (
-                    <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground text-sm">
+                    <div className="rounded-3xl border border-border bg-card p-12 text-center text-muted-foreground text-sm shadow-card">
                         No applications or invites yet.
                     </div>
                 ) : visibleInfluencers.length === 0 ? (
-                    <div className="bg-card border border-border rounded-2xl p-12 text-center">
+                    <div className="rounded-3xl border border-border bg-card p-12 text-center shadow-card">
                         <p className="text-sm text-muted-foreground">No creators match these filters.</p>
                         <button
                             type="button"
                             onClick={() => setFilters(EMPTY_APPLICATION_FILTERS)}
-                            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-premium"
+                            className="mt-3 inline-flex h-9 items-center gap-1.5 px-4 rounded-full border border-border text-xs font-semibold transition-colors hover:border-foreground"
                         >
                             <X className="w-3.5 h-3.5" />
                             Clear filters
                         </button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-3 sm:gap-4 items-stretch">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3 items-stretch">
                         {visibleInfluencers.map((inf) => {
                             const ci = rankedCampaignInfluencers.find((c) => c.id === inf.ciId);
                             const paymentBadgeStatus = getPaymentBadgeStatus(ci);
@@ -2432,7 +2444,9 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                 });
                             }
 
-                            const PlatformIcon = PLATFORM_ICONS[inf.platform] || Globe;
+                            // A clean line glyph in the card's black-and-yellow bead; the coloured tiles in
+                            // PLATFORM_ICONS are miniature app icons and look dated at this size.
+                            const PlatformIcon = CARD_PLATFORM_GLYPHS[inf.platform] || Globe;
                             const status: InfluencerCampaignStatus | null = workflowStatus;
                             const profileComplete = ci?.profileComplete !== false;
                             const profileIssues = ci?.profileCompletionIssues ?? [];
@@ -2447,21 +2461,37 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
 
                             // Brand Fit — precomputed once in brandFitByCiId (see above).
                             const brandFit = brandFitByCiId.get(inf.ciId) ?? null;
+                            // Campaign Fit: this creator against this campaign, seven signals with a breakdown on hover.
+                            const campaignFit = computeCampaignFit({
+                                brandFit,
+                                audienceMatchPct: (() => {
+                                    const target = { targetAgeRanges: campaign.targetAgeRanges, targetGender: campaign.targetGender, targetLocations: campaign.targetLocations };
+                                    const share = hasAudienceTarget(target) ? audienceMatchShare(inf.audience, target) : null;
+                                    return share == null ? null : share * 100;
+                                })(),
+                                engagementRate: inf.engagement || null,
+                                pastCollaborations: (ci as any)?.pastCollaborations ?? null,
+                                rating: (ci as any)?.rating ?? null,
+                                price: tierAmount ?? null,
+                                followers: inf.followers || null,
+                                campaignPlatform: campaign.platform ?? null,
+                                creatorPlatform: inf.appliedPlatform ?? inf.platform ?? null,
+                            });
 
                             const cardBody = (
                                 <div
                                     key={inf.ciId}
                                     className={cn(
-                                        'bg-card border rounded-xl sm:rounded-2xl p-3 sm:p-4 h-full transition-all duration-300 group relative overflow-hidden flex flex-col shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_-4px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),0_12px_24px_-8px_rgba(0,0,0,0.14)] hover:-translate-y-0.5',
+                                        'bg-card border rounded-2xl p-3 h-full transition-all duration-300 group relative overflow-hidden flex flex-col shadow-card hover:shadow-float hover:-translate-y-0.5',
                                         isReadOnly
                                             ? 'cursor-default border-border'
                                             : isSelected
-                                                ? 'cursor-pointer border-[#fedc03] bg-[#fedc03]/5 ring-1 ring-[#fedc03]/30'
+                                                ? 'cursor-pointer border-brand bg-brand/5 ring-2 ring-brand/40'
                                                 : isAiRecommended
                                                     // Recommended but not chosen: dashed, so it can't be mistaken for a selection.
-                                                    ? cn(canSelectCard ? 'cursor-pointer' : 'cursor-default', 'border-dashed border-[#fedc03] bg-[#fedc03]/5')
+                                                    ? cn(canSelectCard ? 'cursor-pointer' : 'cursor-default', 'border-dashed border-brand bg-brand/5')
                                                 : isAnalyzingCard
-                                                    ? 'cursor-pointer border-[#fedc03] shadow-[0_0_15px_rgba(254,220,3,0.15)] bg-[#fedc03]/5'
+                                                    ? 'cursor-pointer border-brand bg-brand/5'
                                                     : canSelectCard
                                                         ? 'cursor-pointer border-border hover:border-foreground/20'
                                                         : 'cursor-default border-border'
@@ -2470,17 +2500,17 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                 >
                                     {/* AI Scanning Line Animation */}
                                     {isAnalyzingCard && !isSelected && (
-                                        <div className="absolute top-0 left-0 w-full h-0.5 bg-[#fedc03] animate-scan opacity-50" />
+                                        <div className="absolute top-0 left-0 w-full h-0.5 bg-brand animate-scan opacity-60" />
                                     )}
 
                                     {/* Top: square avatar (left) + details (right) */}
-                                    <div className="flex gap-3 sm:gap-4">
-                                        <div className="relative w-16 h-16 sm:w-[100px] sm:h-[100px] shrink-0 rounded-xl overflow-hidden bg-secondary/60">
+                                    <div className="flex gap-2.5">
+                                        <div className="relative w-12 h-12 shrink-0 rounded-full bg-secondary/60 ring-2 ring-brand/50 ring-offset-2 ring-offset-card">
                                             <div
                                                 onClick={(e) => { e.stopPropagation(); setQuickViewId({ influencerId: inf.id, ciId: inf.ciId }); }}
                                                 className={cn(
-                                                    "w-full h-full text-background flex items-center justify-center text-xl font-bold transition-transform duration-500 cursor-pointer group-hover:scale-105 overflow-hidden",
-                                                    isAnalyzingCard && "ring-2 ring-[#fedc03] ring-offset-2 ring-offset-card"
+                                                    "w-full h-full rounded-full text-background flex items-center justify-center text-xl font-bold transition-transform duration-500 cursor-pointer group-hover:scale-105 overflow-hidden",
+                                                    isAnalyzingCard && "animate-pulse"
                                                 )}
                                             >
                                                 <ApiImage
@@ -2488,7 +2518,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                     alt={inf.name}
                                                     className="w-full h-full object-cover"
                                                     fallbackText={(inf.name ?? inf.handle ?? '?').charAt(0)}
-                                                    placeholderClassName="bg-foreground text-background"
+                                                    placeholderClassName="bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand"
                                                 />
                                             </div>
                                             {/* Select indicator — only on cards that can actually be
@@ -2497,10 +2527,10 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                 the bulk action" rather than an approved/accepted status. */}
                                             {!isReadOnly && canSelectCard && (
                                                 <div className={cn(
-                                                    'absolute top-1.5 left-1.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shadow-sm',
-                                                    isSelected ? 'bg-[#fedc03] border-[#fedc03]' : 'bg-card/90 border-border'
+                                                    'absolute -bottom-1 -right-1 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all shadow-sm',
+                                                    isSelected ? 'bg-brand border-brand' : 'bg-card/90 border-border'
                                                 )}>
-                                                    {isSelected && <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} />}
+                                                    {isSelected && <Check className="w-2.5 h-2.5 text-black" strokeWidth={3} />}
                                                 </div>
                                             )}
                                         </div>
@@ -2510,14 +2540,22 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                 <div className="flex-1 min-w-0 pt-0.5">
                                                     <h3
                                                         onClick={(e) => { e.stopPropagation(); setQuickViewId({ influencerId: inf.id, ciId: inf.ciId }); }}
-                                                        className="font-display font-bold text-sm sm:text-[15px] leading-snug line-clamp-2 break-words cursor-pointer hover:text-primary transition-colors"
+                                                        className="font-display font-semibold text-sm tracking-tight leading-snug line-clamp-2 break-words cursor-pointer underline-offset-2 hover:underline"
                                                     >
                                                         {inf.name || inf.handle || 'Unknown'}
                                                     </h3>
                                                     {inf.handle && (
-                                                        <p className="text-xs font-semibold text-foreground/60 mt-0.5 truncate">
+                                                        <p className="text-[11px] text-muted-foreground truncate">
                                                             {inf.handle}
                                                         </p>
+                                                    )}
+                                                    {statusForBadge && (
+                                                        <div className="mt-1">
+                                                            <StatusBadge
+                                                                status={statusForBadge as any}
+                                                                label={awaitingFinalPayment ? 'Awaiting Final Payment' : undefined}
+                                                            />
+                                                        </div>
                                                     )}
                                                     {inf.phoneNumber && (() => {
                                                         const isPhoneUnlocked = ci ? (!!(ci as any)?.paidAt || (status && canChatByInfluencerStatus(status))) : false;
@@ -2535,7 +2573,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                                             onClick={(e) => e.stopPropagation()}
                                                                             className="mt-1.5 inline-flex cursor-help items-center gap-1.5 group/lock"
                                                                         >
-                                                                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#fedc03]/20 text-[#7a6000] ring-1 ring-[#fedc03]/50 shadow-[0_0_8px_-2px_hsl(49_98%_50%_/_0.55)] transition-shadow duration-200 group-hover/lock:shadow-[0_0_13px_-1px_hsl(49_98%_50%_/_0.9)] dark:text-[#fedc03]">
+                                                                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/20 text-foreground ring-1 ring-brand/50 transition-colors duration-200 group-hover/lock:bg-brand">
                                                                                 <Lock className="h-2.5 w-2.5" />
                                                                             </span>
                                                                             <span className="truncate text-[10px] text-muted-foreground">Phone number</span>
@@ -2549,14 +2587,10 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                         );
                                                     })()}
                                                 </div>
-                                                <div className="flex flex-col items-end gap-2 shrink-0 max-w-[46%]">
-                                                    <div className="flex items-center gap-1.5 justify-end flex-wrap">
-                                                    {statusForBadge && (
-                                                        <StatusBadge
-                                                            status={statusForBadge as any}
-                                                            label={awaitingFinalPayment ? 'Awaiting Final Payment' : undefined}
-                                                        />
-                                                    )}
+                                                {/* Right: the Campaign Fit ring (hover for the breakdown), then the actions menu. */}
+                                                <div className="flex items-start gap-0.5 shrink-0">
+                                                    <CampaignFitRing fit={campaignFit} size={44} />
+                                                    <div className="flex items-center">
                                                     {/* Creator replacement 3-dot menu — review stages get "Replace",
                                                         ready-to-accept candidates get "Accept & replace" (only when a
                                                         replaceable target exists). Card click = select, so everything
@@ -2602,8 +2636,6 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                         </DropdownMenu>
                                                     )}
                                                     </div>
-                                                    {/* Under the status tag, where the eye lands after reading it. */}
-                                                    {brandFit && <BrandFitRing fit={brandFit} size={60} />}
                                                 </div>
                                             </div>
 
@@ -2645,14 +2677,14 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-1.5 mt-3 mb-3 flex-wrap">
-                                        <span className="w-5 h-5 rounded-md overflow-hidden shrink-0 flex items-center justify-center bg-secondary text-muted-foreground" title={inf.platform}>
-                                            <PlatformIcon className="w-3.5 h-3.5" />
+                                    <div className="flex items-center gap-1 mt-2 mb-2 flex-wrap">
+                                        <span className="w-5 h-5 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-foreground text-brand" title={inf.platform}>
+                                            <PlatformIcon className="w-3 h-3" strokeWidth={2.25} />
                                         </span>
                                         {/* Platform the influencer chose when applying (mobile asks on 'both' campaigns) */}
                                         {inf.appliedPlatform && (
                                             <span
-                                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-[#fedc03]/15 text-foreground/80 capitalize shrink-0"
+                                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-brand/20 text-foreground capitalize shrink-0"
                                                 title="Platform this creator selected when applying"
                                             >
                                                 Applied on {inf.appliedPlatform === 'both' ? 'Instagram + YouTube' : inf.appliedPlatform}
@@ -2661,19 +2693,19 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                         {/* Visit location the influencer picked at apply time — only meaningful when the campaign actually offered a choice */}
                                         {(campaign.visitAtSite?.options?.length ?? 0) > 1 && inf.selectedVisitLocation && (
                                             <span
-                                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-[#fedc03]/15 text-foreground/80 shrink-0"
+                                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-brand/20 text-foreground shrink-0"
                                                 title={inf.selectedVisitLocation.description}
                                             >
                                                 Visiting {truncateVisitLocationLabel(inf.selectedVisitLocation.description)}
                                             </span>
                                         )}
                                         {inf.creatorSize && (
-                                            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground capitalize shrink-0">
+                                            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-border text-foreground/70 capitalize shrink-0">
                                                 {CREATOR_SIZE_LABELS[inf.creatorSize] || inf.creatorSize}
                                             </span>
                                         )}
                                         {(inf.niche ?? []).slice(0, 2).map((n) => (
-                                            <span key={n} className="text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-secondary/80 text-muted-foreground capitalize shrink-0">{n}</span>
+                                            <span key={n} className="text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-border text-foreground/70 capitalize shrink-0">{n}</span>
                                         ))}
                                     </div>
 
@@ -2742,7 +2774,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
 
                                     {/* Negotiation actions */}
                                     {status === 'applied' && !isReadOnly && (
-                                        <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-2 flex-wrap">
+                                        <div className="mb-2 flex items-center gap-1.5 flex-wrap">
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -2758,9 +2790,11 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                     });
                                                 }}
                                                 disabled={approveApplication.isPending || rejectApplication.isPending || !profileComplete}
-                                                className="flex-1 min-w-[84px] px-3 py-2 text-xs font-semibold rounded-lg border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-premium disabled:opacity-60"
+                                                className="group/accept flex flex-1 min-w-[76px] h-8 items-center justify-center gap-1.5 rounded-full border border-brand bg-brand/20 pl-0.5 pr-2.5 text-xs font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand hover:shadow-card active:translate-y-0 active:scale-[0.97] disabled:opacity-60 disabled:pointer-events-none"
                                             >
-                                                {profileComplete ? 'Accept' : 'Incomplete'}
+                                                {/* Soft yellow pill (solid black was dominating the card): fills solid yellow on hover, and the tick bead grows. */}
+                                                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-card text-foreground shadow-sm transition-transform duration-200 group-hover/accept:scale-110"><Check className="h-3 w-3" strokeWidth={3} /></span>
+                                                <span className="flex-1 text-center">{profileComplete ? 'Accept' : 'Incomplete'}</span>
                                             </button>
                                             <button
                                                 onClick={(e) => {
@@ -2775,7 +2809,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                     );
                                                 }}
                                                 disabled={approveApplication.isPending || rejectApplication.isPending}
-                                                className="flex-1 min-w-[84px] px-3 py-2 text-xs font-semibold rounded-lg border border-destructive text-destructive hover:bg-destructive/5 transition-premium disabled:opacity-60"
+                                                className="flex-1 min-w-[76px] h-8 px-2.5 text-xs font-semibold rounded-full border border-destructive/30 bg-card text-destructive transition-all duration-200 hover:-translate-y-0.5 hover:border-destructive hover:bg-destructive/5 hover:shadow-card active:translate-y-0 active:scale-[0.97] disabled:opacity-60"
                                             >
                                                 Reject
                                             </button>
@@ -2823,15 +2857,15 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                         were recommended, or the main reason they were not. */}
                                     {aiReason && canShowSmartSelect && (
                                         <div className={cn(
-                                            'mb-3 flex items-start gap-1.5 rounded-lg border px-2.5 py-1.5 animate-in fade-in slide-in-from-top-1',
+                                            'mb-3 flex items-start gap-1.5 rounded-xl border px-2.5 py-1.5 animate-in fade-in slide-in-from-top-1',
                                             isAiRecommended
-                                                ? 'border-[#fedc03]/30 bg-[#fedc03]/10'
+                                                ? 'border-brand/40 bg-brand/10'
                                                 : 'border-border bg-secondary/40',
                                         )}>
-                                            <Brain className={cn('w-3 h-3 shrink-0 mt-0.5', isAiRecommended ? 'text-[#a07c00]' : 'text-muted-foreground')} />
+                                            <Brain className={cn('w-3 h-3 shrink-0 mt-0.5', isAiRecommended ? 'text-foreground' : 'text-muted-foreground')} />
                                             <div className={cn(
                                                 'min-w-0 text-[11px] leading-snug',
-                                                isAiRecommended ? 'text-[#7a5c00] dark:text-[#d9bc00]' : 'text-muted-foreground',
+                                                isAiRecommended ? 'text-foreground' : 'text-muted-foreground',
                                             )}>
                                                 <p className="font-bold">
                                                     {isAiRecommended
@@ -2898,30 +2932,30 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                     )}
 
                                     {/* Actions — styled footer strip like CampaignCard */}
-                                    <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                                        <div className="flex items-stretch divide-x divide-border">
-                                            <div className="pr-4">
-                                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-0.5">
+                                    <div className="mt-auto">
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <div className="min-w-0 rounded-xl border border-border bg-secondary/40 px-2 py-1.5">
+                                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                                     <Users className="w-3 h-3" />
                                                     Followers
                                                 </div>
                                                 <PlatformFollowerStats platforms={inf.platforms} totalFallback={inf.followers} />
                                             </div>
-                                            <div className="px-4">
-                                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-0.5">
+                                            <div className="min-w-0 rounded-xl border border-border bg-secondary/40 px-2 py-1.5">
+                                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                                     <BarChart3 className="w-3 h-3" />
                                                     Eng. Rate
                                                 </div>
-                                                <p className="text-sm font-bold text-foreground tabular-nums">
+                                                <p className="text-[13px] font-bold text-foreground tabular-nums">
                                                     {inf.engagement}%
                                                 </p>
                                             </div>
-                                            <div className="pl-4">
-                                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-0.5">
+                                            <div className="min-w-0 rounded-xl border border-brand/30 bg-brand/10 px-2 py-1.5">
+                                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                                     <IndianRupee className="w-3 h-3" />
                                                     Price
                                                 </div>
-                                                <p className="text-sm font-bold text-foreground tabular-nums">
+                                                <p className="text-[13px] font-bold text-foreground tabular-nums">
                                                     {!isReadOnly && tierAmount != null && tierAmount > 0
                                                         ? `₹${tierAmount.toLocaleString('en-IN')}`
                                                         : '—'}
@@ -2931,11 +2965,11 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                     </div>
 
                                     {/* Buttons if actionable */}
-                                    <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
                                         {!isReadOnly && (
                                             <button
                                                 onClick={() => setQuickViewId({ influencerId: inf.id, ciId: inf.ciId })}
-                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-premium whitespace-nowrap"
+                                                className="flex-1 flex h-8 items-center justify-center gap-1.5 px-3 rounded-full border border-border text-xs font-semibold transition-colors hover:border-foreground hover:bg-foreground hover:text-background whitespace-nowrap"
                                             >
                                                 <Eye className="w-3 h-3" />
                                                 View Profile
@@ -2966,7 +3000,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                                     <button
                                                                         type="button"
                                                                         disabled
-                                                                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium bg-secondary/60 text-muted-foreground cursor-not-allowed whitespace-nowrap"
+                                                                        className="flex-1 flex h-8 items-center justify-center gap-1.5 px-3 rounded-full border border-border text-xs font-semibold bg-secondary/60 text-muted-foreground cursor-not-allowed whitespace-nowrap"
                                                                     >
                                                                         <MessageCircle className="w-3 h-3" />
                                                                         Message
@@ -3002,7 +3036,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                                 toast.error('Could not open chat. Try again.');
                                                             }
                                                         }}
-                                                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-premium disabled:opacity-60 whitespace-nowrap"
+                                                        className="flex-1 flex h-8 items-center justify-center gap-1.5 px-3 rounded-full border border-border text-xs font-semibold transition-colors hover:border-foreground hover:bg-foreground hover:text-background disabled:opacity-60 whitespace-nowrap"
                                                     >
                                                         <MessageCircle className="w-3 h-3" />
                                                         {chatLabel}
@@ -3013,7 +3047,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                             const messageButton = chatUnlocked ? (
                                                 <Link
                                                     to="/messages"
-                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-premium whitespace-nowrap"
+                                                    className="flex-1 flex h-8 items-center justify-center gap-1.5 px-3 rounded-full border border-border text-xs font-semibold transition-colors hover:border-foreground hover:bg-foreground hover:text-background whitespace-nowrap"
                                                 >
                                                     <MessageCircle className="w-3 h-3" />
                                                     Message
@@ -3022,7 +3056,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                 <button
                                                     type="button"
                                                     disabled
-                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium bg-secondary/60 text-muted-foreground cursor-not-allowed whitespace-nowrap"
+                                                    className="flex-1 flex h-8 items-center justify-center gap-1.5 px-3 rounded-full border border-border text-xs font-semibold bg-secondary/60 text-muted-foreground cursor-not-allowed whitespace-nowrap"
                                                 >
                                                     <MessageCircle className="w-3 h-3" />
                                                     Message
@@ -3051,7 +3085,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                     {inf.ciId === dividerBeforeCiId && (
                                         <div className="col-span-full flex items-center gap-3 pt-3 pb-1" aria-hidden="true">
                                             <div className="h-px flex-1 bg-border" />
-                                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                                            <span className="rounded-full bg-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand">
                                                 Accepted &amp; in progress
                                             </span>
                                             <div className="h-px flex-1 bg-border" />
@@ -3069,7 +3103,8 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
             {!isReadOnly && !isProductCampaign && <div className="space-y-4">
                 {/* Never scrolls or sticks: a sticky card taller than the viewport would hide the
                     Pay button below the fold, so it sits in the column at full height. */}
-                <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5 flex flex-col">
+                <div className="relative overflow-hidden rounded-3xl border border-brand/30 bg-card bg-gradient-to-br from-brand/10 via-brand/[0.04] to-brand/25 p-4 sm:p-5 flex flex-col shadow-card">
+                    <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
 
                     {/* Progress bar — fills based on selected estimate against total */}
                     {(() => {
@@ -3099,9 +3134,12 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                         const usedPctLabel = usedPct > 0 && usedPct < 1 ? usedPct.toFixed(2) : usedPct.toFixed(0);
 
                         return (
-                            <div className="space-y-3">
+                            <div className="relative space-y-3">
                                 <div className="flex items-center justify-between gap-2">
-                                    <h3 className="text-[15px] font-semibold tracking-tight">Budget</h3>
+                                    <h3 className="flex items-center gap-2.5 font-display text-base font-semibold tracking-tight">
+                                        <span className="grid h-9 w-9 place-items-center rounded-full bg-brand text-black"><Wallet className="h-4 w-4" /></span>
+                                        Budget
+                                    </h3>
                                     <span className={cn(
                                         'rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
                                         isExceeded ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
@@ -3131,12 +3169,12 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                         <div className="flex items-center gap-4">
                                             <div className="relative shrink-0" style={{ width: size, height: size }}>
                                                 <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-                                                    <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-secondary" />
+                                                    <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-foreground/10" />
                                                     {committedLen > 0 && (
                                                         <circle
                                                             cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke}
                                                             strokeDasharray={`${committedLen} ${c}`}
-                                                            className={cn('transition-[stroke-dasharray] duration-500', isExceeded ? 'stroke-rose-500' : 'stroke-[#fedc03]')}
+                                                            className={cn('transition-[stroke-dasharray] duration-500', isExceeded ? 'stroke-rose-500' : 'stroke-brand')}
                                                         />
                                                     )}
                                                     {pendingLen > 0 && (
@@ -3144,7 +3182,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                                             cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke}
                                                             strokeDasharray={`${pendingLen} ${c}`}
                                                             strokeDashoffset={-committedLen}
-                                                            className="stroke-[#fedc03]/45 transition-[stroke-dasharray] duration-500"
+                                                            className="stroke-brand/45 transition-[stroke-dasharray] duration-500"
                                                         />
                                                     )}
                                                 </svg>
@@ -3155,7 +3193,7 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                             </div>
                                             <div className="min-w-0 flex-1 space-y-2.5">
                                                 <div className="flex items-start gap-2">
-                                                    <span className={cn('mt-1 h-2.5 w-2.5 shrink-0 rounded-full', isExceeded ? 'bg-rose-500' : 'bg-[#fedc03]')} />
+                                                    <span className={cn('mt-1 h-2.5 w-2.5 shrink-0 rounded-full', isExceeded ? 'bg-rose-500' : 'bg-brand')} />
                                                     <div className="min-w-0">
                                                         <p className="text-[11px] text-muted-foreground">Used</p>
                                                         <p className="text-base font-semibold tabular-nums">₹{dynamicBudget.toLocaleString('en-IN')}</p>
@@ -3196,16 +3234,16 @@ export function ApplicationsTab({ campaign, applications, isReadOnly }: Applicat
                                     const ringR = 15;
                                     const ringC = 2 * Math.PI * ringR;
                                     return (
-                                        <div className="space-y-2 border-t border-border pt-3">
+                                        <div className="space-y-2 border-t border-dashed border-foreground/15 pt-3">
                                             <p
                                                 className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
                                                 title={`Across ${a.creators} creator${a.creators === 1 ? '' : 's'} · ${a.postsPerCreator} post${a.postsPerCreator === 1 ? '' : 's'} each. Each cost uses the fees of the creators that metric covers.`}
                                             >
                                                 Estimated <Info className="h-3 w-3" />
                                             </p>
-                                            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-border">
+                                            <dl className="grid grid-cols-2 gap-1.5">
                                                 {cells.map((cell) => (
-                                                    <div key={cell.label} className="min-w-0 bg-card px-2 py-1.5" title={cell.cost == null ? cell.title : `${cell.title} · ${rupees(cell.cost)} ${cell.unit}`}>
+                                                    <div key={cell.label} className="min-w-0 rounded-xl border border-border bg-card px-2.5 py-2" title={cell.cost == null ? cell.title : `${cell.title} · ${rupees(cell.cost)} ${cell.unit}`}>
                                                         <dt className="truncate text-[10px] leading-tight text-muted-foreground">{cell.label}{cell.partial && '*'}</dt>
                                                         <dd className="flex min-w-0 items-baseline gap-1 leading-tight">
                                                             <span className="text-sm font-semibold tabular-nums">{cell.value ?? '—'}</span>

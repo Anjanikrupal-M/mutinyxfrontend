@@ -16,6 +16,11 @@ import { MOCK_CAMPAIGNS } from './data';
 import { isDevDemoUser } from './devAuth';
 
 const STORE_KEY = 'mutiny:dev-demo-campaigns';
+// Which sample campaigns this browser's store has already been offered. Bump SEED_VERSION when
+// data.ts gains sample campaigns: stores seeded earlier then pick up the new ones once (and only
+// once, so a sample campaign someone deleted afterwards stays deleted).
+const SEED_VERSION_KEY = 'mutiny:dev-demo-campaigns:seed';
+const SEED_VERSION = '2';
 const LATENCY_MS = 400;
 
 /** True when campaign reads/writes should use this store (dev server + demo account). */
@@ -41,12 +46,26 @@ function seedCampaigns(): Campaign[] {
 function readStore(): Campaign[] {
     try {
         const raw = localStorage.getItem(STORE_KEY);
-        if (raw) return JSON.parse(raw) as Campaign[];
+        if (raw) {
+            const stored = JSON.parse(raw) as Campaign[];
+            if (localStorage.getItem(SEED_VERSION_KEY) === SEED_VERSION) return stored;
+            // Seeded from an older data.ts: add the sample campaigns it has never seen.
+            const known = new Set(stored.map((c) => c.id));
+            const topped = [...stored, ...seedCampaigns().filter((c) => !known.has(c.id))];
+            writeStore(topped);
+            localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
+            return topped;
+        }
     } catch {
         // Unreadable or blocked storage: fall through to a fresh seed.
     }
     const seeded = seedCampaigns();
     writeStore(seeded);
+    try {
+        localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
+    } catch {
+        // Blocked storage: nothing to remember.
+    }
     return seeded;
 }
 

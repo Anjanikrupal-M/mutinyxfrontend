@@ -125,38 +125,49 @@ export default function TeamsPage() {
                 </div>
             )}
 
-            {/* Overview — a dark roster hero beside two compact tiles */}
+            {/* Overview — the roster hero (styled like the dashboard's stat cards) beside two compact tiles */}
             <div className="mb-6 grid grid-cols-12 gap-4">
-                <section className="relative col-span-12 flex animate-fade-up flex-col justify-between gap-6 overflow-hidden rounded-3xl bg-brand p-6 text-foreground shadow-card lg:col-span-7">
-                    <span aria-hidden className="stat-glow pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-background/30 blur-3xl" />
-                    <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+                {/* Same look as the dashboard's stat cards: white with a light yellow tint and border, a
+                    soft glow in the top corner, a large faint icon in the bottom corner, a yellow icon
+                    tile, and the number over a short yellow rule. */}
+                <section className="relative col-span-12 flex animate-fade-up flex-col justify-between gap-6 overflow-hidden rounded-3xl border border-brand/30 bg-card bg-gradient-to-br from-brand/10 via-brand/[0.04] to-brand/25 p-5 text-foreground shadow-card lg:col-span-7">
+                    <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-brand/30 blur-3xl" />
+                    <Users aria-hidden strokeWidth={1.25} className="pointer-events-none absolute -bottom-8 right-24 h-40 w-40 -rotate-12 text-foreground/[0.05]" />
 
                     <div className="relative flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">Your crew</p>
-                            <p className="mt-2 font-display text-5xl font-semibold leading-none tracking-tight tabular-nums">
+                            <div className="flex items-center gap-2.5">
+                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand text-black">
+                                    <Users className="h-4 w-4" />
+                                </span>
+                                <span>
+                                    <span className="block text-[13px] font-semibold leading-5">Your crew</span>
+                                    <span className="block text-xs leading-4 text-muted-foreground">
+                                        {totalMembers === 1 ? 'Person' : 'People'} helping run your campaigns
+                                    </span>
+                                </span>
+                            </div>
+                            <p className="mt-5 font-display text-5xl font-semibold leading-none tracking-tight tabular-nums">
                                 {isLoading ? '—' : totalMembers}
                             </p>
-                            <p className="mt-2 text-sm text-foreground/65">
-                                {totalMembers === 1 ? 'person' : 'people'} helping run your campaigns
-                            </p>
+                            <span aria-hidden className="mt-3 block h-[3px] w-8 rounded-full bg-brand" />
                         </div>
 
                         <span className="relative grid h-14 w-14 shrink-0 place-items-center" title={`${activeShare}% active`}>
                             <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90" aria-hidden>
-                                <circle cx="28" cy="28" r="23" fill="none" strokeWidth="5" className="stroke-foreground/15" />
+                                <circle cx="28" cy="28" r="23" fill="none" strokeWidth="5" className="stroke-foreground/10" />
                                 <circle
                                     cx="28" cy="28" r="23" fill="none" strokeWidth="5" strokeLinecap="round"
                                     strokeDasharray={RING_LENGTH}
                                     strokeDashoffset={RING_LENGTH * (1 - activeShare / 100)}
-                                    className="stroke-foreground transition-[stroke-dashoffset] [transition-duration:1200ms] ease-out"
+                                    className="stroke-brand transition-[stroke-dashoffset] [transition-duration:1200ms] ease-out"
                                 />
                             </svg>
                             <span className="relative text-[11px] font-bold tabular-nums">{activeShare}%</span>
                         </span>
                     </div>
 
-                    <div className="relative flex flex-wrap items-center justify-between gap-4">
+                    <div className="relative flex flex-wrap items-center justify-between gap-4 border-t border-dashed border-border pt-4">
                         {/* Avatar stack of the roster */}
                         <div className="flex items-center">
                             {teamMembers.slice(0, 5).map((m, i) => (
@@ -164,8 +175,8 @@ export default function TeamsPage() {
                                     key={m.id}
                                     title={m.name}
                                     className={cn(
-                                        'grid h-9 w-9 place-items-center rounded-full border-2 border-brand font-display text-[11px] font-bold animate-pop',
-                                        i % 2 === 0 ? 'bg-foreground text-brand' : 'bg-background text-foreground',
+                                        'grid h-9 w-9 place-items-center rounded-full border-2 border-card font-display text-[11px] font-bold animate-pop',
+                                        i % 2 === 0 ? 'bg-foreground text-brand' : 'bg-brand text-black',
                                         i > 0 && '-ml-2.5',
                                         cardDelay(i + 2),
                                     )}
@@ -174,19 +185,19 @@ export default function TeamsPage() {
                                 </span>
                             ))}
                             {totalMembers > 5 && (
-                                <span className="-ml-2.5 grid h-9 w-9 place-items-center rounded-full border-2 border-brand bg-foreground/10 text-[11px] font-semibold">
+                                <span className="-ml-2.5 grid h-9 w-9 place-items-center rounded-full border-2 border-card bg-secondary text-[11px] font-semibold">
                                     +{totalMembers - 5}
                                 </span>
                             )}
                             {!isLoading && totalMembers === 0 && (
-                                <span className="text-sm text-foreground/60">No one here yet</span>
+                                <span className="text-sm text-muted-foreground">No one here yet</span>
                             )}
                         </div>
 
                         <button
                             type="button"
                             onClick={openCreate}
-                            className="flex h-8 items-center gap-1.5 rounded-full border border-foreground/15 bg-foreground/[0.06] px-3 text-xs font-semibold transition-colors hover:bg-foreground hover:text-brand"
+                            className="flex h-9 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-semibold text-background shadow-sm transition-all duration-200 hover:shadow-float active:scale-[0.97]"
                         >
                             <UserPlus className="h-3.5 w-3.5" />
                             {isFreePlan ? 'Upgrade to invite' : 'Invite'}

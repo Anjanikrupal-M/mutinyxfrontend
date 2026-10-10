@@ -15,14 +15,17 @@ import {
     MessageCircle,
     Package,
     Plus,
+    Rocket,
     Send,
     Users,
+    Wallet,
     type LucideIcon,
 } from 'lucide-react';
 import { cn, formatCompactCurrency } from '@/lib/utils';
 import { useCampaigns } from '@/modules/campaigns/hooks/useCampaigns';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
-import { differenceInCalendarDays, formatDistanceToNow, formatDistanceToNowStrict } from 'date-fns';
+import { useInfluencerSearch } from '@/modules/discover/hooks/useInfluencers';
+import { formatDistanceToNow, formatDistanceToNowStrict } from 'date-fns';
 import { resolveNotificationUrl, type Notification } from '@/shared/stores/notificationStore';
 import {
     CAMPAIGN_PHASE_LABELS,
@@ -36,7 +39,7 @@ import { CoverflowCarousel, type CoverflowSlide } from '@/shared/components/Cove
 import { HireManagerButton } from '@/shared/components/HireManagerButton';
 import { Tile } from '@/shared/components/BentoUi';
 import { useAuthStore } from '@/shared/stores/authStore';
-import { MOCK_CAMPAIGN_COVERS, MOCK_NOTIFICATIONS } from '@/mocks/data';
+import { MOCK_NOTIFICATIONS } from '@/mocks/data';
 
 // Sample rows for Recent activity while the account has none of its own: the mock notifications,
 // re-dated to these ages (in minutes) so they read as recent.
@@ -70,7 +73,7 @@ function getGreeting() {
     return 'Welcome back';
 }
 
-// One quiet pill per status; only the dot carries the colour (same hues as StatusBadge).
+// Live campaigns: the colour of the dot beside each status (same hues as StatusBadge).
 const PHASE_DOT: Partial<Record<CampaignPhase, string>> = {
     active: 'bg-emerald-500',
     applications_open: 'bg-emerald-500',
@@ -137,6 +140,8 @@ const STAT_LOOK = {
 
 interface StatCardProps {
     icon: LucideIcon;
+    /** Large faint icon in the bottom corner; the card's own icon unless another reads better at that size. */
+    markIcon?: LucideIcon;
     title: string;
     subtitle: string;
     /** null while loading */
@@ -149,7 +154,7 @@ interface StatCardProps {
  * Dashboard stat card. Every card shares the same three rows so they line up across the row:
  * header (icon, title) · big number · one-line footer pinned to the bottom. Display only: it links nowhere.
  */
-function StatCard({ icon: Icon, title, subtitle, value, footer, className }: StatCardProps) {
+function StatCard({ icon: Icon, markIcon: MarkIcon = Icon, title, subtitle, value, footer, className }: StatCardProps) {
     const t = STAT_LOOK;
     return (
         <section
@@ -162,7 +167,7 @@ function StatCard({ icon: Icon, title, subtitle, value, footer, className }: Sta
             {/* Quiet decoration in the empty right side: a soft wash of brand yellow in the top corner
                 and the card's own icon, large and faint, tucked into the bottom corner. */}
             <span aria-hidden className={cn('pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full blur-3xl', t.wash)} />
-            <Icon aria-hidden strokeWidth={1.25} className={cn('pointer-events-none absolute -bottom-5 -right-4 h-28 w-28 -rotate-12', t.mark)} />
+            <MarkIcon aria-hidden strokeWidth={1.25} className={cn('pointer-events-none absolute -bottom-5 -right-4 h-28 w-28 -rotate-12', t.mark)} />
 
             <div className="relative flex h-9 items-center">
                 <span className="flex min-w-0 items-center gap-2.5">
@@ -198,19 +203,8 @@ const ATTENTION_TRIGGERS: { icon: LucideIcon; label: string }[] = [
 ];
 
 
-/** "Applications close in 5 days" / "Applications closed 3 days ago"; soon = within 3 days. */
-function applicationTiming(deadline?: string | null): { text: string; short: string; soon: boolean; open: boolean } | null {
-    if (!deadline) return null;
-    const date = new Date(String(deadline).split('T')[0] + 'T23:59:59');
-    if (Number.isNaN(date.getTime())) return null;
-    const days = differenceInCalendarDays(date, new Date());
-    if (days > 1) return { text: `Applications close in ${days} days`, short: `${days}d left`, soon: days <= 3, open: true };
-    if (days === 1) return { text: 'Applications close tomorrow', short: 'Closes tomorrow', soon: true, open: true };
-    if (days === 0) return { text: 'Applications close today', short: 'Closes today', soon: true, open: true };
-    // Past a month the exact count is just noise.
-    if (days < -30) return { text: 'Applications closed', short: 'Closed', soon: false, open: false };
-    return { text: `Applications closed ${-days} day${days === -1 ? '' : 's'} ago`, short: 'Closed', soon: false, open: false };
-}
+/** Follower counts the way creators quote them: 12.4K, 1.2M. */
+const compactCount = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -257,6 +251,8 @@ function DashboardPageContent() {
     // Fetch active campaigns with high limit so client-side expired filter gives an accurate visible count
     const { data: activeCampaignsRaw } = useCampaigns({ limit: 500, status: 'active' });
     const { data: notificationsData, isLoading: notificationsLoading } = useNotifications({ limit: 5 });
+    // Creators for the cover flow: the marketplace's best-ranked dozen.
+    const { data: influencersData, isLoading: influencersLoading } = useInfluencerSearch({ sort: 'best', limit: 12 });
 
     const campaigns = campaignsData?.data ?? [];
     const notifications = notificationsData?.data ?? [];
@@ -343,52 +339,41 @@ function DashboardPageContent() {
         .sort((a, b) => totalPendingFor(b) - totalPendingFor(a));
     const totalWaiting = pendingTaskCampaigns.reduce((sum, c) => sum + totalPendingFor(c), 0);
 
-    // Live campaigns cover flow: one slide per live campaign (up to twelve) — its cover, and the
-    // facts listed under the carousel while it is in the centre.
-    const covers = activeCampaigns.slice(0, 12);
-    const campaignSlides: CoverflowSlide[] = covers.map((campaign, i) => {
-        const phase = getCampaignPhase(campaign);
-        const ownCover = campaign.thumbnailUrl || campaign.thumbnail;
-        // No cover of its own yet: a placeholder nature photo, the same one each time for a given slot.
-        const placeholder = MOCK_CAMPAIGN_COVERS[i % MOCK_CAMPAIGN_COVERS.length];
-        const budget = toNumber(campaign.budgetTotal ?? campaign.budget?.total);
-        const progress = Math.max(0, Math.min(100, Math.round(toNumber(campaign.progress))));
-        const timing = applicationTiming(campaign.applicationDeadline || campaign.deadline);
+    // Creators cover flow: one slide per creator — their photo, and the facts listed under the
+    // carousel while they are in the centre.
+    const creators = influencersData?.data ?? [];
+    const creatorSlides: CoverflowSlide[] = creators.map((creator) => {
+        const handle = creator.handle ? String(creator.handle).replace(/^@/, '') : null;
+        // Total audience: the API's own figure, else the sum across the creator's platforms.
+        const followers = toNumber(creator.followerCount) || (creator.platforms ?? []).reduce((sum, platform) => sum + toNumber(platform.followers), 0);
+        const niche = (creator.niches ?? creator.niche ?? []).find(Boolean);
         return {
-            id: campaign.id,
-            alt: campaign.name,
-            title: campaign.name,
-            subtitle: (
-                <span className="inline-flex items-center gap-1.5">
-                    <span className={cn('h-1.5 w-1.5 rounded-full', phaseDot(phase))} />
-                    {CAMPAIGN_PHASE_LABELS[phase]}
-                </span>
-            ),
-            src: ownCover ? undefined : placeholder.src,
-            cover: ownCover ? (
+            id: creator.id,
+            alt: creator.userName,
+            title: creator.userName,
+            subtitle: [handle && `@${handle}`, creator.tier].filter(Boolean).join(' · '),
+            cover: (
                 <ApiImage
-                    src={ownCover}
+                    src={creator.userAvatarUrl}
                     alt=""
-                    fallbackText={campaign.name.charAt(0).toUpperCase()}
+                    fallbackText={(creator.userName || '?').charAt(0).toUpperCase()}
                     className="h-full w-full select-none object-cover text-5xl"
                     placeholderClassName="bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand"
                 />
-            ) : undefined,
+            ),
             meta: [
-                { label: 'Creators', value: `${campaign.creatorsAccepted || 0} accepted` },
-                // A campaign paid in product has no cash budget; "₹0" read as a mistake.
-                { label: 'Budget', value: budget > 0 ? `₹${formatCompactCurrency(budget)}` : (campaign.budgetMode ?? campaign.budget?.mode) === 'product' ? 'Product only' : 'No budget set' },
-                ...(campaign.location ? [{ label: 'Location', value: campaign.location }] : []),
-                { label: 'Progress', value: `${progress}%` },
-                ...(timing?.open ? [{ label: 'Applications', value: timing.short }] : []),
+                { label: 'Followers', value: followers > 0 ? compactCount.format(followers) : '—' },
+                { label: 'Engagement', value: creator.engagementRate != null && creator.engagementRate !== '' ? `${creator.engagementRate}%` : '—' },
+                ...(niche ? [{ label: 'Niche', value: niche }] : []),
+                ...(creator.location ? [{ label: 'Location', value: creator.location }] : []),
             ],
         };
     });
     // The row scrolls round in a ring and should run off both edges of the stage, which takes about
-    // ten covers. With fewer campaigns the set is repeated (ids suffixed) until there are that many.
-    const coverRepeats = covers.length >= 2 && covers.length < 10 ? Math.ceil(10 / covers.length) : 1;
+    // ten covers. With fewer creators the set is repeated (ids suffixed) until there are that many.
+    const coverRepeats = creators.length >= 2 && creators.length < 10 ? Math.ceil(10 / creators.length) : 1;
     const coverSlides = Array.from({ length: coverRepeats }, (_, round) =>
-        campaignSlides.map((slide) => ({ ...slide, id: `${slide.id}-${round}` })),
+        creatorSlides.map((slide) => ({ ...slide, id: `${slide.id}-${round}` })),
     ).flat();
 
     // ── Time context ── when the numbers were fetched, and what changed recently.
@@ -414,6 +399,34 @@ function DashboardPageContent() {
         .filter((row) => row.pending + row.overdue.total > 0)
         .sort((a, b) => b.overdue.total - a.overdue.total || b.pending - a.pending);
     const overdueTotal = attentionRows.reduce((sum, row) => sum + row.overdue.total, 0);
+    // What that backlog is made of, in the order a campaign reaches it; `start`/`share` are each
+    // kind's position and width on the 0–100 bar.
+    const attentionKinds = (() => {
+        const sums = attentionRows.reduce(
+            (acc, row) => ({
+                applications: acc.applications + row.counts.pendingApplications,
+                scripts: acc.scripts + row.counts.pendingScripts,
+                work: acc.work + row.counts.pendingSubmissions,
+                ship: acc.ship + row.counts.pendingProductShipments,
+            }),
+            { applications: 0, scripts: 0, work: 0, ship: 0 },
+        );
+        const total = sums.applications + sums.scripts + sums.work + sums.ship;
+        let start = 0;
+        return [
+            { key: 'applications', label: 'applications', value: sums.applications, fill: 'fill-foreground', dot: 'bg-foreground' },
+            { key: 'scripts', label: 'scripts', value: sums.scripts, fill: 'fill-brand', dot: 'bg-brand ring-1 ring-foreground/20' },
+            { key: 'work', label: 'work', value: sums.work, fill: 'fill-foreground/50', dot: 'bg-foreground/50' },
+            { key: 'ship', label: 'to ship', value: sums.ship, fill: 'fill-foreground/25', dot: 'bg-foreground/25' },
+        ]
+            .filter((kind) => kind.value > 0)
+            .map((kind) => {
+                const share = total > 0 ? (kind.value / total) * 100 : 0;
+                const placed = { ...kind, start, share };
+                start += share;
+                return placed;
+            });
+    })();
 
     const titleWords = `${getGreeting()}, ${firstName}`.split(' ');
 
@@ -499,6 +512,7 @@ function DashboardPageContent() {
                     White for the counts; the one black card is the one that asks you to act. */}
                 <StatCard
                     icon={Megaphone}
+                    markIcon={Rocket}
                     title="Active campaigns"
                     subtitle="Live right now"
                     value={campaignsLoading ? null : <CountUp value={activeShown} />}
@@ -541,6 +555,7 @@ function DashboardPageContent() {
 
                 <StatCard
                     icon={IndianRupee}
+                    markIcon={Wallet}
                     title="Total budget"
                     subtitle="Committed, all campaigns"
                     value={campaignsLoading ? null : (
@@ -557,90 +572,55 @@ function DashboardPageContent() {
                     className="[animation-delay:210ms]"
                 />
 
+                {/* ── Influencers ── the marketplace's top creators as a cover flow (CoverflowCarousel) on a
+                    dark stage: one creator in the centre, their facts on a single line underneath. The row
+                    drifts right to left on its own and waits while you point at it; drag or use the arrow
+                    keys to browse, click a side cover to bring it forward and the front one to open the profile. */}
                 <Tile
-                    icon={Megaphone}
+                    icon={Users}
                     iconClassName="bg-brand text-black"
-                    title="Live campaigns"
+                    title="Top influencers"
                     description="They scroll by on their own; point at one to hold it."
                     className="lg:col-span-7 [animation-delay:280ms]"
-                    aside={activeCampaigns.length > 0 ? (
+                    aside={creators.length > 0 ? (
                         <span className="flex shrink-0 items-center gap-2">
-                            <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 sm:flex">
-                                <span className="relative flex h-1.5 w-1.5">
-                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                </span>
-                                {activeCampaignsCount || activeCampaigns.length} live
+                            <span className="hidden rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground sm:block">
+                                Top {creators.length}
                             </span>
-                            <TileLink to="/campaigns?status=active" />
+                            <TileLink to="/discover" />
                         </span>
                     ) : undefined}
                 >
-                    {campaignsLoading ? (
-                        <div className="space-y-2">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="h-[52px] animate-pulse rounded-2xl bg-secondary/60" />
-                            ))}
-                        </div>
-                    ) : activeCampaigns.length === 0 ? (
-                        <div className="relative flex min-h-[260px] flex-1 flex-col">
-                            {/* Ghost rows: a faded preview of what this list looks like once campaigns are live. */}
-                            <div aria-hidden className="space-y-2 [mask-image:linear-gradient(to_bottom,black_20%,transparent)]">
-                                {['w-1/3', 'w-2/5', 'w-1/4'].map((nameWidth, i) => (
-                                    <div key={i} className="flex items-center gap-3 rounded-2xl border border-dashed border-border px-2 py-2">
-                                        <span className="h-11 w-11 shrink-0 rounded-xl bg-secondary" />
-                                        <span className="flex-1 space-y-1.5">
-                                            <span className={cn('block h-3 rounded-full bg-secondary', nameWidth)} />
-                                            <span className="block h-2.5 w-1/2 rounded-full bg-secondary/70" />
-                                        </span>
-                                        <span className="h-6 w-20 shrink-0 rounded-full bg-secondary" />
-                                    </div>
-                                ))}
-                            </div>
-                            {/* Soft card-coloured halo behind the message so it reads cleanly over the ghost rows. */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(closest-side,hsl(var(--card))_55%,transparent)] px-4 text-center">
-                                <span className="relative grid h-12 w-12 animate-pop place-items-center rounded-2xl bg-foreground text-brand shadow-float [animation-delay:350ms]">
-                                    <Megaphone className="h-5 w-5" />
-                                    <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-brand ring-2 ring-card" />
-                                </span>
-                                <p className="mt-3 font-display text-base font-semibold tracking-tight">No live campaigns yet</p>
-                                <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
-                                    Launch one and it shows up here with its creators, budget and where it stands.
-                                </p>
-                                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => navigate('/campaigns/create?fresh=true')}
-                                        className="group flex h-9 items-center gap-2 rounded-full bg-foreground px-4 text-[13px] font-semibold text-background shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97]"
-                                    >
-                                        <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-                                        Create campaign
-                                    </button>
-                                    <Link
-                                        to="/discover"
-                                        className="group flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-foreground/80 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground hover:text-foreground"
-                                    >
-                                        Browse creators
-                                        <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-                                    </Link>
-                                </div>
-                            </div>
+                    {influencersLoading ? (
+                        <div className="min-h-[240px] flex-1 animate-pulse rounded-2xl bg-secondary/60" />
+                    ) : creators.length === 0 ? (
+                        <div className="flex min-h-[240px] flex-1 flex-col items-center justify-center rounded-2xl bg-secondary/50 px-4 text-center">
+                            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-foreground text-brand">
+                                <Users className="h-5 w-5" />
+                            </span>
+                            <p className="mt-3 font-display text-base font-semibold tracking-tight">No creators to show yet</p>
+                            <p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">
+                                Browse the marketplace to find creators for your campaigns.
+                            </p>
+                            <Link
+                                to="/discover"
+                                className="group mt-4 flex h-9 items-center gap-1.5 rounded-full bg-foreground px-4 text-[13px] font-semibold text-background shadow-sm transition-all duration-200 hover:shadow-float active:scale-[0.97]"
+                            >
+                                Discover creators
+                                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                            </Link>
                         </div>
                     ) : (
-                        // Cover flow on a dark stage (CoverflowCarousel), kept short: one cover in the centre,
-                        // its facts on a single line underneath. The row drifts right to left on its own and
-                        // waits while you point at it; drag or use the arrow keys to browse, click a side
-                        // cover to bring it forward and the front one to open its campaign.
-                        <div className="flex flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-neutral-950 pb-6 pt-2 text-white">
+                        <div className="flex flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-neutral-950 pb-5 text-white">
                             <CoverflowCarousel
                                 slides={coverSlides}
-                                onActivate={(index) => navigate(`/campaigns/${covers[index % covers.length].id}`)}
+                                onActivate={(index) => navigate(`/discover/${creators[index % creators.length].id}`)}
                                 autoplay={3200}
-                                cardWidth="clamp(112px, 11vw, 148px)"
+                                cardWidth="clamp(100px, 9vw, 128px)"
                                 // The covers fade out toward both edges of the stage instead of stopping short of them.
-                                frameClassName="py-7 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]"
+                                frameClassName="py-5 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]"
                                 cardClassName="bg-neutral-800 ring-1 ring-white/10"
-                                label="Live campaigns"
+                                label="Top influencers"
                                 showCaption
                                 captionLayout="inline"
                             />
@@ -654,17 +634,6 @@ function DashboardPageContent() {
                     title="Needs attention"
                     description="Overdue first, then the biggest backlog."
                     className="lg:col-span-5 [animation-delay:350ms]"
-                    aside={
-                        overdueTotal > 0 ? (
-                            <span className="shrink-0 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-destructive">
-                                {overdueTotal} overdue
-                            </span>
-                        ) : attentionRows.length > 0 ? (
-                            <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
-                                {plural(attentionRows.length, 'campaign')}
-                            </span>
-                        ) : undefined
-                    }
                 >
                     {attentionRows.length === 0 ? (
                         <div className="flex flex-1 flex-col">
@@ -692,60 +661,231 @@ function DashboardPageContent() {
                             </ul>
                         </div>
                     ) : (
-                        <div className="-mx-2 flex flex-1 flex-col">
-                            {attentionRows.slice(0, 5).map(({ campaign: c, counts, pending, overdue }) => {
-                                // The row opens the tab holding what to deal with first: overdue work, then what is waiting.
-                                const tab =
-                                    overdue.scripts > 0 ? 'scripts'
-                                    : overdue.work > 0 ? 'submissions'
-                                    : counts.pendingScripts > 0 ? 'scripts'
-                                    : counts.pendingSubmissions > 0 ? 'submissions'
-                                    : counts.pendingApplications > 0 ? 'applications'
-                                    : 'kanban';
-                                return (
-                                    <Link
-                                        key={c.id}
-                                        to={`/campaigns/${c.id}?tab=${tab}`}
-                                        className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-secondary/70"
-                                    >
-                                        <ApiImage
-                                            src={c.thumbnailUrl || c.thumbnail}
-                                            alt=""
-                                            fallbackText={c.name.charAt(0).toUpperCase()}
-                                            className="h-10 w-10 shrink-0 rounded-xl object-cover text-sm"
-                                            placeholderClassName="bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand"
-                                        />
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block truncate text-[13px] font-semibold leading-5">{c.name}</span>
-                                            <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
-                                                {overdue.total > 0 && (
-                                                    <span className="font-semibold text-destructive">
-                                                        <Meta icon={Clock}>{overdue.total} overdue</Meta>
-                                                    </span>
-                                                )}
-                                                {counts.pendingApplications > 0 && <Meta icon={Users}>{plural(counts.pendingApplications, 'application')}</Meta>}
-                                                {counts.pendingProductShipments > 0 && <Meta icon={Package}>{counts.pendingProductShipments} to ship</Meta>}
-                                                {counts.pendingScripts > 0 && <Meta icon={FileText}>{plural(counts.pendingScripts, 'script')}</Meta>}
-                                                {counts.pendingSubmissions > 0 && <Meta icon={Send}>{plural(counts.pendingSubmissions, 'work item')}</Meta>}
-                                            </span>
+                        <div className="flex flex-1 flex-col gap-2.5">
+                            {/* Headline: everything waiting as one figure, split by kind in a bar and a legend. */}
+                            <div className="relative overflow-hidden rounded-2xl border border-brand/30 bg-card bg-gradient-to-br from-brand/10 via-brand/[0.04] to-brand/25 px-3.5 py-3">
+                                <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-brand/30 blur-3xl" />
+                                <div className="relative flex items-end justify-between gap-3">
+                                    <p className="flex items-end gap-2">
+                                        <span className="font-display text-3xl font-semibold leading-none tracking-tight tabular-nums">{totalWaiting}</span>
+                                        <span className="text-[11px] leading-[14px] text-muted-foreground">
+                                            {totalWaiting === 1 ? 'task' : 'tasks'} waiting
+                                            <br />
+                                            across {plural(attentionRows.length, 'campaign')}
                                         </span>
-                                        {pending > 0 && (
-                                            <span className="grid h-6 min-w-6 shrink-0 place-items-center rounded-full bg-brand px-1.5 text-xs font-bold tabular-nums text-accent-foreground ring-1 ring-foreground/10">
-                                                {pending}
-                                            </span>
-                                        )}
-                                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-foreground" />
-                                    </Link>
-                                );
-                            })}
+                                    </p>
+                                    {overdueTotal > 0 && (
+                                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2.5 py-1 text-xs font-semibold tabular-nums text-white">
+                                            <Clock className="h-3 w-3" />
+                                            {overdueTotal} overdue
+                                        </span>
+                                    )}
+                                </div>
+                                {totalWaiting > 0 && (
+                                    <>
+                                        <svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden className="relative mt-2.5 h-1.5 w-full overflow-hidden rounded-full">
+                                            <rect width="100" height="6" className="fill-foreground/10" />
+                                            {attentionKinds.map((kind) => (
+                                                <rect key={kind.key} x={kind.start} width={kind.share} height="6" className={kind.fill} />
+                                            ))}
+                                        </svg>
+                                        <ul className="relative mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-[11px]">
+                                            {attentionKinds.map((kind) => (
+                                                <li key={kind.key} className="flex items-center gap-1.5 text-muted-foreground">
+                                                    <span className={cn('h-1.5 w-1.5 rounded-full', kind.dot)} />
+                                                    <strong className="font-semibold tabular-nums text-foreground">{kind.value}</strong>
+                                                    {kind.label}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* The queue: one small card per campaign, the most urgent marked "Start here". Each
+                                kind of waiting work is a chip; the row opens the tab holding what to deal with first. */}
+                            <ul className="space-y-1.5">
+                                {attentionRows.slice(0, 3).map(({ campaign: c, counts, pending, overdue }, i) => {
+                                    const tab =
+                                        overdue.scripts > 0 ? 'scripts'
+                                        : overdue.work > 0 ? 'submissions'
+                                        : counts.pendingScripts > 0 ? 'scripts'
+                                        : counts.pendingSubmissions > 0 ? 'submissions'
+                                        : counts.pendingApplications > 0 ? 'applications'
+                                        : 'kanban';
+                                    const chips: { icon: LucideIcon; text: string }[] = [
+                                        ...(counts.pendingApplications > 0 ? [{ icon: Users, text: plural(counts.pendingApplications, 'application') }] : []),
+                                        ...(counts.pendingScripts > 0 ? [{ icon: FileText, text: plural(counts.pendingScripts, 'script') }] : []),
+                                        ...(counts.pendingSubmissions > 0 ? [{ icon: Send, text: plural(counts.pendingSubmissions, 'work item') }] : []),
+                                        ...(counts.pendingProductShipments > 0 ? [{ icon: Package, text: `${counts.pendingProductShipments} to ship` }] : []),
+                                    ];
+                                    const first = i === 0;
+                                    return (
+                                        <li key={c.id}>
+                                            <Link
+                                                to={`/campaigns/${c.id}?tab=${tab}`}
+                                                className={cn(
+                                                    'group flex items-center gap-2.5 rounded-xl border px-2.5 py-2 transition-all duration-200 hover:bg-card hover:shadow-card',
+                                                    first ? 'border-brand bg-brand/10 hover:border-foreground/40' : 'border-border bg-secondary/40 hover:border-foreground/25',
+                                                )}
+                                            >
+                                                <span className="relative shrink-0">
+                                                    <ApiImage
+                                                        src={c.thumbnailUrl || c.thumbnail}
+                                                        alt=""
+                                                        fallbackText={c.name.charAt(0).toUpperCase()}
+                                                        className="h-9 w-9 rounded-lg object-cover text-xs"
+                                                        placeholderClassName="bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand"
+                                                    />
+                                                    {/* How much is waiting here, pinned to the cover. */}
+                                                    {pending > 0 && (
+                                                        <span className="absolute -right-1.5 -top-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-foreground px-1 text-[9px] font-bold tabular-nums text-brand ring-2 ring-card">
+                                                            {pending}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="truncate text-xs font-semibold leading-[18px]" title={c.name}>{c.name}</span>
+                                                        {first && (
+                                                            <span className="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold uppercase leading-none tracking-[0.08em] text-black">Start here</span>
+                                                        )}
+                                                    </span>
+                                                    <span className="mt-0.5 flex flex-wrap items-center gap-1">
+                                                        {overdue.total > 0 && (
+                                                            <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-px text-[10px] font-semibold leading-4 text-destructive">
+                                                                <Clock className="h-3 w-3" />
+                                                                {overdue.total} overdue
+                                                            </span>
+                                                        )}
+                                                        {chips.map(({ icon: ChipIcon, text }) => (
+                                                            <span key={text} className="flex items-center gap-1 rounded-full border border-border bg-card px-1.5 py-px text-[10px] font-medium leading-4 text-foreground/75">
+                                                                <ChipIcon className="h-2.5 w-2.5 stroke-[1.75]" />
+                                                                {text}
+                                                            </span>
+                                                        ))}
+                                                    </span>
+                                                </span>
+                                                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-foreground/5 text-foreground/60 transition-all duration-200 group-hover:bg-foreground group-hover:text-brand">
+                                                    <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+
                             <Link
                                 to="/dashboard/pending-tasks"
-                                className="group mx-2 mt-auto flex items-center justify-center gap-1 rounded-full border border-border py-2 text-xs font-medium transition-colors hover:border-foreground"
+                                // Full-width button: the flood has to travel much further than on a normal one.
+                                className="flood-btn group mt-auto flex h-9 items-center gap-2 rounded-full bg-foreground pl-1 pr-4 text-xs font-semibold text-background duration-500 [--flood-scale:70] hover:shadow-float"
                             >
-                                {attentionRows.length > 5 ? `View all ${attentionRows.length} campaigns` : 'Open pending tasks'}
-                                <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                                <span className="flood-btn-icon grid h-7 w-7 place-items-center rounded-full bg-brand text-black">
+                                    <ArrowRight className="h-3.5 w-3.5" />
+                                </span>
+                                <span className="flood-btn-label flex-1 pr-7 text-center">
+                                    {attentionRows.length > 3 ? `Review all ${attentionRows.length} campaigns` : 'Open pending tasks'}
+                                </span>
                             </Link>
                         </div>
+                    )}
+                </Tile>
+
+                {/* ── Live campaigns ── one small card per live campaign (up to six), in the same grid as
+                    Recent activity beside it: cover, name, creators and budget, then status and progress. */}
+                <Tile
+                    icon={Megaphone}
+                    iconClassName="bg-brand text-black"
+                    title="Live campaigns"
+                    description="Where each one stands, and how far along it is."
+                    className="lg:col-span-6 [animation-delay:350ms]"
+                    aside={activeCampaigns.length > 0 ? (
+                        <span className="flex shrink-0 items-center gap-2">
+                            <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 sm:flex">
+                                <span className="relative flex h-1.5 w-1.5">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                </span>
+                                {activeCampaignsCount || activeCampaigns.length} live
+                            </span>
+                            <TileLink to="/campaigns?status=active" />
+                        </span>
+                    ) : undefined}
+                >
+                    {campaignsLoading ? (
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="h-[72px] animate-pulse rounded-xl bg-secondary/60" />
+                            ))}
+                        </div>
+                    ) : activeCampaigns.length === 0 ? (
+                        <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-secondary/50 p-4">
+                            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-foreground text-brand">
+                                <Megaphone className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold">No live campaigns yet</p>
+                                <p className="text-xs leading-5 text-muted-foreground">Launch one and it shows up here with its creators, budget and progress.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/campaigns/create?fresh=true')}
+                                className="group flex h-9 items-center gap-2 rounded-full bg-foreground px-4 text-[13px] font-semibold text-background shadow-sm transition-all duration-200 hover:shadow-float active:scale-[0.97]"
+                            >
+                                <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
+                                Create campaign
+                            </button>
+                        </div>
+                    ) : (
+                        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                            {activeCampaigns.slice(0, 6).map((campaign) => {
+                                const phase = getCampaignPhase(campaign);
+                                const budget = toNumber(campaign.budgetTotal ?? campaign.budget?.total);
+                                const progress = Math.max(0, Math.min(100, Math.round(toNumber(campaign.progress))));
+                                return (
+                                    <li key={campaign.id}>
+                                        <Link
+                                            to={`/campaigns/${campaign.id}`}
+                                            className="group flex h-full items-center gap-2.5 rounded-xl border border-border bg-secondary/40 px-2.5 py-2 transition-all duration-200 hover:border-foreground/25 hover:bg-card hover:shadow-card"
+                                        >
+                                            <ApiImage
+                                                src={campaign.thumbnailUrl || campaign.thumbnail}
+                                                alt=""
+                                                fallbackText={campaign.name.charAt(0).toUpperCase()}
+                                                className="h-9 w-9 shrink-0 rounded-lg object-cover text-xs"
+                                                placeholderClassName="bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand"
+                                            />
+                                            <span className="min-w-0 flex-1">
+                                                <span className="flex items-center justify-between gap-2">
+                                                    <span className="flex min-w-0 items-center gap-1.5 text-[9px] font-bold uppercase leading-3 tracking-[0.1em] text-muted-foreground">
+                                                        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', phaseDot(phase))} />
+                                                        <span className="truncate">{CAMPAIGN_PHASE_LABELS[phase]}</span>
+                                                    </span>
+                                                    <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-foreground" />
+                                                </span>
+                                                <span className="block truncate text-xs font-semibold leading-[18px]" title={campaign.name}>{campaign.name}</span>
+                                                <span className="flex items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
+                                                    <span className="tabular-nums">{plural(campaign.creatorsAccepted || 0, 'creator')}</span>
+                                                    <span className="text-muted-foreground/40">·</span>
+                                                    <span className="truncate font-semibold text-foreground/75 tabular-nums">
+                                                        {/* A campaign paid in product has no cash budget; "₹0" read as a mistake. */}
+                                                        {budget > 0 ? `₹${formatCompactCurrency(budget)}` : (campaign.budgetMode ?? campaign.budget?.mode) === 'product' ? 'Product only' : 'No budget set'}
+                                                    </span>
+                                                </span>
+                                                {/* Progress: a slim track that fills in brand yellow, the figure beside it. */}
+                                                <span className="mt-1 flex items-center gap-2" title={`${progress}% complete`}>
+                                                    <svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden className="h-1 flex-1 overflow-hidden rounded-full">
+                                                        <rect width="100" height="6" className="fill-foreground/10" />
+                                                        <rect width={progress} height="6" className="fill-brand" />
+                                                    </svg>
+                                                    <span className="text-[11px] font-semibold leading-none tabular-nums">{progress}%</span>
+                                                </span>
+                                            </span>
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
                     )}
                 </Tile>
 
@@ -754,21 +894,21 @@ function DashboardPageContent() {
                     iconClassName="bg-brand text-black"
                     title="Recent activity"
                     description="What happened across your campaigns lately."
-                    className="[animation-delay:420ms]"
+                    className="lg:col-span-6 [animation-delay:420ms]"
                     aside={notificationsLoading ? undefined : showingSampleActivity ? (
                         <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-muted-foreground">Sample data</span>
                     ) : undefined}
                 >
                     {notificationsLoading ? (
-                        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                             {[1, 2, 3, 4, 5, 6].map((i) => (
-                                <div key={i} className="h-[84px] animate-pulse rounded-2xl bg-secondary/60" />
+                                <div key={i} className="h-[62px] animate-pulse rounded-xl bg-secondary/60" />
                             ))}
                         </div>
                     ) : (
                         // One small card per update, like the cards inside the other tiles: what kind it
                         // is and when, then the message and its campaign. The last slot leads to everything.
-                        <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                             {activity.slice(0, 5).map((item) => {
                                 const kind = ACTIVITY_KINDS[item.type] ?? ACTIVITY_KINDS.system;
                                 const KindIcon = kind.icon;
@@ -779,21 +919,21 @@ function DashboardPageContent() {
                                     <li key={item.id}>
                                         <Link
                                             to={showingSampleActivity ? '/notifications' : resolveNotificationUrl(item) || '#'}
-                                            className="group flex h-full items-start gap-3 rounded-2xl border border-border bg-secondary/40 p-3 transition-all duration-200 hover:border-foreground/25 hover:bg-card hover:shadow-card"
+                                            className="group flex h-full items-start gap-2.5 rounded-xl border border-border bg-secondary/40 px-2.5 py-2 transition-all duration-200 hover:border-foreground/25 hover:bg-card hover:shadow-card"
                                         >
-                                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground transition-colors duration-200 group-hover:bg-brand">
-                                                <KindIcon className="h-4 w-4" />
+                                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand/20 text-foreground transition-colors duration-200 group-hover:bg-brand">
+                                                <KindIcon className="h-3.5 w-3.5" />
                                             </span>
                                             <span className="min-w-0 flex-1">
                                                 <span className="flex items-baseline justify-between gap-2">
-                                                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{kind.label}</span>
-                                                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                                                    <span className="text-[9px] font-bold uppercase leading-3 tracking-[0.1em] text-muted-foreground">{kind.label}</span>
+                                                    <span className="shrink-0 text-[11px] leading-3 tabular-nums text-muted-foreground">
                                                         {formatDistanceToNowStrict(new Date(item.createdAt), { addSuffix: true })}
                                                     </span>
                                                 </span>
-                                                <span className="mt-0.5 line-clamp-2 text-[13px] font-medium leading-5 text-foreground/85 group-hover:text-foreground">{text}</span>
+                                                <span className="mt-0.5 line-clamp-2 text-xs font-medium leading-[17px] text-foreground/85 group-hover:text-foreground">{text}</span>
                                                 {showCampaign && (
-                                                    <span className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground">
+                                                    <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] leading-4 text-muted-foreground">
                                                         <Megaphone className="h-3 w-3 shrink-0" />
                                                         <span className="truncate">{item.campaignName}</span>
                                                     </span>
@@ -806,14 +946,14 @@ function DashboardPageContent() {
                             <li>
                                 <Link
                                     to="/notifications"
-                                    className="group flex h-full min-h-[84px] items-center justify-between gap-3 rounded-2xl border border-dashed border-foreground/20 p-3 pl-4 transition-all duration-200 hover:border-foreground hover:bg-card"
+                                    className="group flex h-full min-h-[58px] items-center justify-between gap-3 rounded-xl border border-dashed border-foreground/20 px-3 py-2 transition-all duration-200 hover:border-foreground hover:bg-card"
                                 >
                                     <span className="min-w-0">
-                                        <span className="block text-[13px] font-semibold">All notifications</span>
-                                        <span className="block truncate text-xs text-muted-foreground">Everything that has happened so far</span>
+                                        <span className="block text-xs font-semibold">All notifications</span>
+                                        <span className="block truncate text-[11px] text-muted-foreground">Everything that has happened so far</span>
                                     </span>
-                                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-foreground text-brand transition-transform duration-200 group-hover:translate-x-0.5">
-                                        <ChevronRight className="h-4 w-4" />
+                                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-foreground text-brand transition-transform duration-200 group-hover:translate-x-0.5">
+                                        <ChevronRight className="h-3.5 w-3.5" />
                                     </span>
                                 </Link>
                             </li>

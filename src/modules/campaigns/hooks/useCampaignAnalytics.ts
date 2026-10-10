@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { API } from '@/core/api';
 import http from '@/core/http';
+import { isDevDemoSession } from '@/mocks/devCampaigns';
+import { demoCampaignAnalyticsSummary, demoCampaignMetricHistory } from '@/mocks/devCampaignTabs';
 
 export interface PlatformMetricSection {
     totalReach: number;
@@ -55,8 +57,10 @@ export interface CampaignAnalyticsSummary {
 export function useCampaignAnalytics(campaignId: string) {
     return useQuery<CampaignAnalyticsSummary>({
         queryKey: ['campaign-analytics-summary', campaignId],
-        queryFn: () =>
-            http.get(API.analytics.campaignSummary(campaignId)).then((r) => r.data.data),
+        // Demo account in development: served from the browser (see mocks/devCampaignTabs.ts), no server call.
+        queryFn: () => (isDevDemoSession()
+            ? demoCampaignAnalyticsSummary(campaignId)
+            : http.get(API.analytics.campaignSummary(campaignId)).then((r) => r.data.data)),
         staleTime: 1000 * 60 * 2,
         enabled: !!campaignId,
     });
@@ -107,7 +111,9 @@ export interface CampaignMetricHistory {
 export function useCampaignMetricHistory(campaignId: string) {
     return useQuery<CampaignMetricHistory>({
         queryKey: ['campaign-metric-history', campaignId],
-        queryFn: () => http.get(API.analytics.campaignHistory(campaignId)).then((r) => r.data.data),
+        queryFn: () => (isDevDemoSession()
+            ? demoCampaignMetricHistory(campaignId)
+            : http.get(API.analytics.campaignHistory(campaignId)).then((r) => r.data.data)),
         staleTime: 1000 * 60 * 2,
         enabled: !!campaignId,
     });

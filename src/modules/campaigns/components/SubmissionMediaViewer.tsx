@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ExternalLink, FileText, Loader2, Play, Image as ImageIcon, Video, Link as LinkIcon, File, X, ChevronLeft } from 'lucide-react';
+import { ExternalLink, FileText, Loader2, Play, Image as ImageIcon, Video, Link as LinkIcon, File, X, ChevronLeft, Instagram, Youtube, Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
 import { getImageUrl } from '@/lib/utils';
 import http from '@/core/http';
 
@@ -112,9 +112,11 @@ interface SubmissionMediaViewerProps {
         url?: string | null;
     }>;
     showEmptyState?: boolean;
+    /** Fill the parent's height: a social post's phone sizes itself to the space instead of a fixed height, so the whole post fits without scrolling. */
+    fill?: boolean;
 }
 
-export function SubmissionMediaViewer({ submission, additionalMedia = [], showEmptyState = true }: SubmissionMediaViewerProps) {
+export function SubmissionMediaViewer({ submission, additionalMedia = [], showEmptyState = true, fill = false }: SubmissionMediaViewerProps) {
     const [mediaFallback, setMediaFallback] = useState<Record<string, 'image-failed' | 'video-failed'>>({});
     const [linkPreviewFallback, setLinkPreviewFallback] = useState<Record<string, boolean>>({});
     const [expandedCardKey, setExpandedCardKey] = useState<string | null>(null);
@@ -708,33 +710,153 @@ export function SubmissionMediaViewer({ submission, additionalMedia = [], showEm
 
         if (card.kind === 'embed' && card.embedUrl) {
             const isPortrait = isPortraitPreviewUrl(card.rawUrl);
+            const host = getHostname(card.rawUrl) || 'Social post';
+            const isInstagram = /instagram\.com|instagr\.am/i.test(card.rawUrl);
+            const isYouTube = /youtube\.com|youtu\.be/i.test(card.rawUrl);
+            const PlatformGlyph = isInstagram ? Instagram : isYouTube ? Youtube : LinkIcon;
+            const platformName = isInstagram ? 'Instagram' : isYouTube ? 'YouTube' : host;
+            // Sample links from the demo account (".../reel/demo-…") point at posts that don't exist,
+            // so Instagram's embed would only say the link is broken. Show a styled stand-in instead.
+            const isDemoLink = /\/demo-/i.test(card.rawUrl);
+
+            // The post's own bar: platform, address, and the way out to the real post.
+            const linkBar = (
+                <div className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-1.5 shadow-sm">
+                    <span className={isInstagram
+                        ? 'grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 text-white'
+                        : isYouTube ? 'grid h-8 w-8 shrink-0 place-items-center rounded-full bg-red-600 text-white' : 'grid h-8 w-8 shrink-0 place-items-center rounded-full bg-foreground text-brand'}>
+                        <PlatformGlyph className="h-4 w-4" strokeWidth={2.25} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold leading-4">{platformName}</span>
+                        <span className="block truncate text-[11px] leading-4 text-muted-foreground">{card.rawUrl}</span>
+                    </span>
+                    <a
+                        href={card.rawUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground px-3 text-[11px] font-semibold text-background transition-all duration-200 hover:shadow-card"
+                    >
+                        Open post
+                        <ExternalLink className="h-3 w-3" />
+                    </a>
+                </div>
+            );
+
+            // What sits on the phone's screen: the live embed, or the demo stand-in.
+            const screen = isDemoLink ? (
+                <div className="relative flex h-full flex-col bg-neutral-950 text-white">
+                    <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-amber-300 via-pink-500 to-purple-700">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgb(255_255_255_/_0.35),transparent_45%)]" />
+                        <span className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/25 backdrop-blur">
+                            <Play className="ml-1 h-7 w-7 fill-white text-white" />
+                        </span>
+                        <span className="absolute bottom-3 left-3 right-3 rounded-2xl bg-black/35 px-3 py-2 text-[11px] leading-snug backdrop-blur">
+                            Sample post. The live {platformName} embed appears here for real submissions.
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-4 px-4 py-3">
+                        <Heart className="h-5 w-5" />
+                        <MessageCircle className="h-5 w-5" />
+                        <Send className="h-5 w-5" />
+                        <Bookmark className="ml-auto h-5 w-5" />
+                    </div>
+                </div>
+            ) : (
+                <iframe
+                    src={card.embedUrl}
+                    className="h-full w-full border-0 bg-white"
+                    title="Submission Content"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    scrolling="no"
+                    allowFullScreen
+                />
+            );
+
+            // Facts that float beside the phone on the stage.
+            const submittedOn = typeof submission.submittedAt === 'string' ? new Date(submission.submittedAt) : null;
+            const submittedLabel = submittedOn && !Number.isNaN(submittedOn.getTime())
+                ? submittedOn.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                : null;
+            const formatLabel = /\/(reel|reels)\//i.test(card.rawUrl) ? 'Reel' : /\/shorts\//i.test(card.rawUrl) ? 'Short' : /\/p\//i.test(card.rawUrl) ? 'Post' : 'Video';
+            const platformBead = (
+                <span className={isInstagram
+                    ? 'grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 text-white'
+                    : isYouTube ? 'grid h-7 w-7 shrink-0 place-items-center rounded-full bg-red-600 text-white' : 'grid h-7 w-7 shrink-0 place-items-center rounded-full bg-foreground text-brand'}>
+                    <PlatformGlyph className="h-3.5 w-3.5" strokeWidth={2.25} />
+                </span>
+            );
+
+            if (isPortrait) {
+                return (
+                    // A showcase stage: a dark backdrop with soft light, the phone in the middle and the post's
+                    // facts floating beside it as tilted cards; "Open post" rides along the bottom.
+                    // With `fill` it takes its parent's height and the phone shrinks to fit it; otherwise
+                    // it is pinned to the top of the scrolling panel so the post stays in view.
+                    <div
+                        key={card.key}
+                        className={`relative isolate overflow-hidden rounded-3xl px-4 pb-16 pt-5 ${fill ? 'flex h-full min-h-0 flex-col' : 'sticky top-0 z-10'}`}
+                    >
+                        {/* Backdrop: deep charcoal with a soft spotlight from above, a warm brand glow behind
+                            the phone, and a gentle floor of light it stands on. No pattern. */}
+                        <span aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-neutral-900 via-neutral-950 to-black" />
+                        <span aria-hidden className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-[140%] -translate-x-1/2 rounded-[100%] bg-white/[0.07] blur-3xl" />
+                        <span aria-hidden className="pointer-events-none absolute left-1/2 top-[45%] -z-10 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/25 blur-[90px]" />
+                        <span aria-hidden className="pointer-events-none absolute -bottom-16 left-1/2 -z-10 h-32 w-[80%] -translate-x-1/2 rounded-[100%] bg-brand/20 blur-3xl" />
+                        <span aria-hidden className="pointer-events-none absolute inset-0 -z-10 rounded-3xl ring-1 ring-inset ring-white/10" />
+
+                        <div className={`relative flex justify-center ${fill ? 'min-h-0 flex-1' : ''}`}>
+                            {/* Floating facts — hidden when the stage is too narrow for them. */}
+                            <div className="pointer-events-none absolute left-0 top-6 hidden -rotate-6 sm:block">
+                                <div className="flex items-center gap-2 rounded-2xl bg-card py-1.5 pl-1.5 pr-3 shadow-float">
+                                    {platformBead}
+                                    <span className="leading-tight">
+                                        <span className="block text-xs font-semibold">{platformName}</span>
+                                        <span className="block text-[10px] text-muted-foreground">{formatLabel}</span>
+                                    </span>
+                                </div>
+                            </div>
+                            {submittedLabel && (
+                                <div className="pointer-events-none absolute bottom-10 right-0 hidden rotate-3 sm:block">
+                                    <div className="rounded-2xl bg-brand px-3 py-2 text-black shadow-float">
+                                        <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] opacity-70">Submitted</span>
+                                        <span className="block font-display text-sm font-bold">{submittedLabel}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className={`relative aspect-[9/17] max-w-full rounded-[40px] bg-neutral-800 p-1.5 shadow-[0_40px_80px_-24px_rgb(0_0_0_/_0.8)] ring-1 ring-white/15 ${fill ? 'h-full max-h-[600px]' : 'h-[min(540px,calc(92vh-230px))]'}`}>
+                                <span aria-hidden className="absolute left-1/2 top-3 z-10 h-4 w-20 -translate-x-1/2 rounded-full bg-neutral-950" />
+                                <div className="h-full overflow-hidden rounded-[34px] bg-white">
+                                    {screen}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* The way out to the real post, along the bottom of the stage. */}
+                        <div className="absolute inset-x-4 bottom-3 flex items-center gap-2 rounded-full bg-white/10 py-1 pl-3 pr-1 text-white ring-1 ring-white/10 backdrop-blur-md">
+                            <LinkIcon className="h-3.5 w-3.5 shrink-0 text-white/60" />
+                            <span className="min-w-0 flex-1 truncate text-[11px] text-white/70">{card.rawUrl}</span>
+                            <a
+                                href={card.rawUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-brand px-3.5 text-[11px] font-semibold text-black transition-transform duration-200 hover:scale-[1.03]"
+                            >
+                                Open post
+                                <ExternalLink className="h-3 w-3" />
+                            </a>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
-                <div
-                    key={card.key}
-                    className={isPortrait
-                        ? 'relative w-full max-w-[430px] mx-auto max-h-[80vh] min-h-[620px] flex flex-col bg-secondary/20 rounded-xl overflow-hidden border border-border shrink-0'
-                        : 'relative w-full max-h-[80vh] min-h-[460px] flex flex-col bg-secondary/20 rounded-xl overflow-hidden border border-border shrink-0'}
-                >
-                    <iframe
-                        src={card.embedUrl}
-                        className="w-full flex-1 border-0"
-                        title="Submission Content"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        scrolling="no"
-                        allowFullScreen
-                    />
-                    <div className="p-3 bg-background/80 backdrop-blur-sm border-t border-border flex items-center justify-between gap-4 shrink-0">
-                        <span className="text-[10px] text-muted-foreground truncate flex-1">{card.rawUrl}</span>
-                        <a
-                            href={card.rawUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground text-background text-[10px] font-bold hover:opacity-90 transition-premium"
-                        >
-                            <ExternalLink className="w-3 h-3" />
-                            Open in New Tab
-                        </a>
+                // Landscape video: the link bar, then a framed widescreen.
+                <div key={card.key} className={fill ? 'flex h-full min-h-0 flex-col gap-3' : 'sticky top-0 z-10 flex shrink-0 flex-col gap-3 bg-card pb-1'}>
+                    {linkBar}
+                    <div className="relative overflow-hidden rounded-3xl bg-neutral-950 p-2 shadow-float">
+                        <div className="aspect-video overflow-hidden rounded-2xl bg-white">{screen}</div>
                     </div>
                 </div>
             );
@@ -845,7 +967,7 @@ export function SubmissionMediaViewer({ submission, additionalMedia = [], showEm
 
     if (cards.length === 1) {
         return (
-            <div className="space-y-3 shrink-0">
+            <div className={fill && cards[0].kind === 'embed' ? 'h-full min-h-0' : 'space-y-3 shrink-0'}>
                 {renderCardFull(cards[0])}
             </div>
         );

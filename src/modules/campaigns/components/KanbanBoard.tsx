@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Globe, MessageCircle, ExternalLink } from 'lucide-react';
+import { Globe, MessageCircle, ExternalLink, Clock, Instagram, Youtube, Twitter, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProofOfWorkSubmissions } from '../hooks/useSubmissions';
 import { useStatusBoardApplications, useMarkProductShipped } from '../hooks/useApplications';
@@ -20,7 +20,6 @@ import { getSkipsCreatorScript } from '@/modules/campaigns/utils/campaignStatus'
 
 const CHAT_LOCKED_TOOLTIP = 'Chat unlocks automatically during the script & work phase.';
 
-import { PLATFORM_ICONS } from '@/shared/components/SocialIcons';
 const formatFollowers = (n: number) => Math.round(n || 0).toLocaleString('en-IN');
 
 /**
@@ -50,6 +49,11 @@ interface KanbanColumn {
     label: string;
     color: string;
 }
+
+// Line glyphs for the platform chip on a card (the coloured app-icon tiles look dated at this size).
+const PLATFORM_GLYPHS: Record<string, LucideIcon> = { instagram: Instagram, youtube: Youtube, twitter: Twitter, x: Twitter };
+// Each platform's own colour for its glyph, so the chip says which network at a glance.
+const PLATFORM_TINT: Record<string, string> = { instagram: 'text-pink-600', youtube: 'text-red-600', twitter: 'text-foreground', x: 'text-foreground' };
 
 const KANBAN_COLUMNS: KanbanColumn[] = [
     { key: 'product_pending', label: 'Waiting for Product', color: 'bg-fuchsia-500' },
@@ -162,13 +166,13 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
         <div
             ref={boardRef}
             className={cn(
-                'bg-card border border-border rounded-2xl p-3 sm:p-4 flex flex-col',
+                'bg-card border border-border rounded-3xl p-3 sm:p-4 flex flex-col shadow-card',
                 !isReadOnly && 'md:h-[var(--fill-h)] md:-mb-14',
             )}
         >
             <div className="flex-1 min-h-0 overflow-x-auto scrollbar-thin pb-2">
-                <div className="flex gap-4 w-full h-full">
-                {visibleColumns.map((col) => {
+                <div className="flex gap-3 w-full h-full">
+                {visibleColumns.map((col, colIndex) => {
                     const colItems = Array.isArray(campaignInfluencers)
                         ? campaignInfluencers.filter((ci) => columnKeyFor(ci) === col.key)
                         : [];
@@ -176,28 +180,36 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                     return (
                         <div key={col.key} className="flex-1 min-w-[260px] flex flex-col min-h-0">
                             {/* Column header */}
-                            <div className="flex items-center justify-between mb-2.5 px-1">
-                                <div className="flex items-center gap-2">
-                                    <h4 className="text-xs font-semibold tracking-wide">{col.label}</h4>
-                                </div>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground font-semibold">
+                            {/* Column header: the stage as a numbered step, like the campaign builder's
+                                stepper — the number turns yellow while creators are in this stage. */}
+                            <div className="mb-2.5 flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-2 shadow-sm">
+                                <span className={cn(
+                                    'grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-bold tabular-nums',
+                                    colItems.length > 0 ? 'bg-brand text-black' : 'bg-secondary text-muted-foreground',
+                                )}>
+                                    {String(colIndex + 1).padStart(2, '0')}
+                                </span>
+                                <h4 className="min-w-0 flex-1 truncate text-xs font-semibold">{col.label}</h4>
+                                <span className={cn(
+                                    'grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[10px] font-bold tabular-nums',
+                                    colItems.length > 0 ? 'bg-foreground text-background' : 'bg-secondary text-muted-foreground',
+                                )}>
                                     {colItems.length}
                                 </span>
                             </div>
 
                             {/* Column body fills the board's height and scrolls on its own */}
                             <div className={cn(
-                                'flex flex-col gap-2.5 overflow-y-auto scrollbar-thin bg-secondary/40 rounded-xl p-3 border border-border/60',
+                                'flex flex-col gap-2 overflow-y-auto scrollbar-thin rounded-2xl p-2',
+                                colItems.length > 0 ? 'bg-secondary/50' : 'border-2 border-dashed border-border bg-secondary/20',
                                 isReadOnly ? 'h-[560px]' : 'h-[520px] md:h-auto md:flex-1 md:min-h-0',
                             )}>
                                 {isLoadingBoard ? (
                                     Array.from({ length: 3 }, (_, i) => <KanbanCardSkeleton key={i} />)
                                 ) : colItems.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center flex-1 text-center opacity-60">
-                                        <div className="w-10 h-10 rounded-full bg-background border border-border/50 flex items-center justify-center mb-3 shadow-sm">
-                                            <span className="text-muted-foreground text-sm font-semibold">0</span>
-                                        </div>
-                                        <p className="text-[12px] text-muted-foreground font-medium">No creators in this stage</p>
+                                    <div className="flex flex-col items-center justify-center flex-1 text-center">
+                                        <p className="text-xs font-medium text-muted-foreground">No creators here</p>
+                                        <p className="mt-0.5 text-[11px] text-muted-foreground/70">They appear as they reach this stage</p>
                                     </div>
                                 ) : (
                                     colItems.map((ci) => {
@@ -205,7 +217,7 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                         const displayName = String((ci as any).userName ?? (ci as any).influencerName ?? (ci as any).handle ?? 'Unknown');
                                         const displayHandle = String((ci as any).handle ?? (ci as any).influencerHandle ?? '');
                                         const avatarLetter = displayName.charAt(0) || '#';
-                                        const PlatformIcon = PLATFORM_ICONS[(ci as any).platform] || Globe;
+                                        const PlatformIcon = PLATFORM_GLYPHS[(ci as any).platform] || Globe;
                                         const proofLink = getProofOfWorkLink(ci);
                                         const awaitingFinalPay = isAwaitingFinalPayment(
                                             effectiveStatus(ci.status) as any,
@@ -217,13 +229,13 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                         return (
                                             <div
                                                 key={ci.id}
-                                                className="bg-card border border-border rounded-2xl p-3.5 hover:border-foreground/30 hover:shadow-md transition-all duration-300 group flex flex-col"
+                                                className="bg-card border border-border rounded-2xl p-3 shadow-sm hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-card transition-all duration-200 group flex flex-col"
                                             >
                                                 {/* Avatar + name */}
                                                 <div className="flex items-center gap-2.5 mb-2">
                                                     <div 
                                                         onClick={() => setQuickViewId(String(ci.influencerId))}
-                                                        className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#fedc03] transition-all"
+                                                        className="w-9 h-9 rounded-full bg-gradient-to-br from-neutral-700 to-neutral-950 font-display text-brand flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden cursor-pointer ring-2 ring-brand/40 ring-offset-1 ring-offset-card hover:ring-brand transition-all"
                                                     >
                                                         {((ci as any).userAvatarUrl ?? (ci as any).influencerAvatar) ? (
                                                             <ApiImage src={(ci as any).userAvatarUrl ?? (ci as any).influencerAvatar} alt={displayName} className="w-full h-full object-cover" />
@@ -234,69 +246,68 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                                     <div className="min-w-0">
                                                         <p 
                                                             onClick={() => setQuickViewId(String(ci.influencerId))}
-                                                            className="text-xs font-semibold truncate cursor-pointer hover:text-primary transition-colors"
+                                                            className="text-[13px] font-semibold truncate cursor-pointer underline-offset-2 hover:underline"
                                                         >
                                                             {displayName}
                                                         </p>
-                                                        <p className="text-[10px] text-muted-foreground truncate">{displayHandle}</p>
+                                                        <p className="text-[11px] text-muted-foreground truncate">{displayHandle}</p>
                                                     </div>
                                                 </div>
 
                                                 {/* Social + stats */}
-                                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-2">
-                                                    <span className="flex items-center gap-0.5">
-                                                        <PlatformIcon className="w-3 h-3" />
+                                                {/* Platform and followers, tier, and how long they have sat in this stage. */}
+                                                <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                                                    <span className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 font-semibold tabular-nums text-foreground" title="Followers">
+                                                        <PlatformIcon className={cn('h-3 w-3', PLATFORM_TINT[(ci as any).platform] ?? 'text-muted-foreground')} strokeWidth={2.25} />
                                                         {formatFollowers((ci as any).followerCount ?? (ci as any).followersCount ?? 0)}
                                                     </span>
                                                     {(ci as any).tier && (
-                                                        <span className="flex items-center gap-0.5">
-                                                            <span className="uppercase">{String((ci as any).tier).slice(0, 1)}</span>
+                                                        <span className="rounded-full border border-border px-2 py-0.5 font-medium capitalize text-foreground/75">
                                                             {String((ci as any).tier)}
                                                         </span>
                                                     )}
-                                                </div>
-
-                                                {/* Days indicator */}
-                                                <div className={cn(
-                                                    'text-[10px] font-medium px-1.5 py-0.5 rounded inline-block',
-                                                    days > 7 ? 'bg-red-50 text-red-600' :
-                                                        days > 3 ? 'bg-amber-50 text-amber-600' :
-                                                            'bg-secondary text-muted-foreground'
-                                                )}>
-                                                    {days}d in stage
+                                                    <span className={cn(
+                                                        'ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold tabular-nums',
+                                                        days > 7 ? 'bg-destructive/10 text-destructive' :
+                                                            days > 3 ? 'bg-brand/25 text-foreground' :
+                                                                'bg-secondary text-muted-foreground'
+                                                    )} title="Days in this stage">
+                                                        <Clock className="h-2.5 w-2.5" />
+                                                        {days}d
+                                                    </span>
                                                 </div>
 
                                                 {awaitingFinalPay && (
-                                                    <div className="mt-3 rounded-lg border border-orange-200/70 bg-orange-50/70 px-2.5 py-2 text-[10px] text-orange-700">
+                                                    <div className="mt-2.5 rounded-xl border border-brand/40 bg-brand/10 px-2.5 py-2 text-[10px] text-foreground">
                                                         <p className="font-semibold mb-0.5">Final Payment Pending</p>
-                                                        <p className="text-orange-700/80 leading-snug">
+                                                        <p className="text-muted-foreground leading-snug">
                                                             Work approved. Pay the final round in the Work Submissions tab to unlock proof of work.
                                                         </p>
                                                     </div>
                                                 )}
 
                                                 {showProofBox && (
-                                                    <div className="mt-3 rounded-lg border border-sky-200/70 bg-sky-50/70 px-2.5 py-2 text-[10px] text-sky-700">
+                                                    <div className="mt-2.5 rounded-xl border border-border bg-secondary/50 px-2.5 py-2 text-[10px] text-foreground">
                                                         <p className="font-semibold mb-1">{proofLink ? 'Review Proof' : 'Proof of Work'}</p>
                                                         {proofLink ? (
                                                             <a
                                                                 href={proofLink}
                                                                 target="_blank"
                                                                 rel="noreferrer"
-                                                                className="inline-flex items-center gap-1 text-sky-700 hover:text-sky-900 hover:underline"
+                                                                className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
                                                             >
                                                                 View Proof Link
                                                                 <ExternalLink className="w-3 h-3" />
                                                             </a>
                                                         ) : (
-                                                            <span className="text-sky-700/80">Waiting for proof link from mobile app.</span>
+                                                            <span className="text-muted-foreground">Waiting for proof link from mobile app.</span>
                                                         )}
                                                     </div>
                                                 )}
 
                                                 {/* Product Shipment Action (Brand Owner) */}
                                                 {!isReadOnly && effectiveStatus(ci.status) === 'product_pending' && isProductMode && currentUser?.role === 'brand_owner' && (
-                                                    <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
                                                         {(() => {
                                                             const isShipped = !!(ci as any).productShippedAt;
                                                             const isSubmittingThis = markProductShipped.isPending && markProductShipped.variables?.appId === ci.id;
@@ -315,10 +326,10 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                                             }}
                                                             disabled={isSubmittingThis || isShipped}
                                                             className={cn(
-                                                                'w-full flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 rounded-md border transition-premium whitespace-nowrap',
+                                                                'w-full flex h-8 items-center justify-center gap-1.5 text-[11px] font-semibold px-3 rounded-full border transition-all duration-200 whitespace-nowrap',
                                                                 isShipped
-                                                                    ? 'bg-fuchsia-100 text-fuchsia-600 border-fuchsia-300 opacity-60 cursor-not-allowed'
-                                                                    : 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200 hover:bg-fuchsia-100'
+                                                                    ? 'bg-secondary text-muted-foreground border-border cursor-not-allowed'
+                                                                    : 'bg-brand/20 text-foreground border-brand hover:bg-brand'
                                                             )}
                                                         >
                                                             <PackageCheck className="w-3.5 h-3.5" />
@@ -330,7 +341,7 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                                 )}
 
                                                 {/* Message — only when chat unlocked (script/work phase) */}
-                                                {!isReadOnly && <div className="mt-3 pt-2.5 border-t border-border/50 flex justify-between items-center" onClick={(e) => e.stopPropagation()}>
+                                                {!isReadOnly && <div className="mt-2.5 pt-2.5 border-t border-dashed border-border flex justify-between items-center" onClick={(e) => e.stopPropagation()}>
                                                     {currentUser?.role === 'brand_owner' ? (
                                                         canChatByInfluencerStatus(effectiveStatus(ci.status) as any) || ((ci as any).chatEnabled && effectiveStatus(ci.status) === 'completed') ? (
                                                             <button
@@ -347,7 +358,7 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                                                         toast.error('Could not open chat.');
                                                                     }
                                                                 }}
-                                                                className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-premium disabled:opacity-60"
+                                                                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border px-2.5 text-[11px] font-semibold text-foreground/80 transition-colors hover:border-foreground hover:bg-foreground hover:text-background disabled:opacity-60"
                                                             >
                                                                 <MessageCircle className="w-3 h-3" />
                                                                 {(ci as any).chatEnabled
@@ -358,7 +369,7 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                                             <TooltipProvider>
                                                                 <Tooltip>
                                                                     <TooltipTrigger asChild>
-                                                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground/70 cursor-not-allowed">
+                                                                        <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[11px] font-semibold text-muted-foreground cursor-not-allowed">
                                                                             <MessageCircle className="w-3 h-3" />
                                                                             Message
                                                                         </span>
@@ -370,7 +381,7 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                                     ) : canChatByInfluencerStatus(effectiveStatus(ci.status) as any) ? (
                                                         <Link
                                                             to="/messages"
-                                                            className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-premium"
+                                                            className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border px-2.5 text-[11px] font-semibold text-foreground/80 transition-colors hover:border-foreground hover:bg-foreground hover:text-background"
                                                         >
                                                             <MessageCircle className="w-3 h-3" />
                                                             Message
@@ -379,7 +390,7 @@ export function KanbanBoard({ campaign, applications, isReadOnly }: KanbanBoardP
                                                         <TooltipProvider>
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
-                                                                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground/70 cursor-not-allowed">
+                                                                    <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[11px] font-semibold text-muted-foreground cursor-not-allowed">
                                                                         <MessageCircle className="w-3 h-3" />
                                                                         Message
                                                                     </span>

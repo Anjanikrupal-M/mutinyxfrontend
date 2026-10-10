@@ -23,6 +23,7 @@ import {
     isDevDemoSession,
 } from '@/mocks/devCampaigns';
 import { demoTeamMemberName } from '@/mocks/devTeam';
+import { withDemoPerformance } from '@/mocks/devCampaignTabs';
 
 interface CampaignFilters {
     status?: string;
@@ -59,7 +60,8 @@ export function useCampaign(id: string) {
     return useQuery({
         queryKey: queryKeys.campaigns.detail(id),
         queryFn: async () => {
-            if (isDevDemoSession()) return demoGetCampaign(id);
+            // Demo account: performance figures come from the same demo posts the Analytics tab shows.
+            if (isDevDemoSession()) return withDemoPerformance(await demoGetCampaign(id));
             const { data } = await http.get<ApiResponse<Campaign>>(API.campaigns.getById(id));
             return data.data;
         },

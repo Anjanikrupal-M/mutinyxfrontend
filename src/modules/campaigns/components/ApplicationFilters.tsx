@@ -324,7 +324,7 @@ export function ApplicationFilters({
         };
 
     return (
-        <div className="bg-card border border-border rounded-2xl mb-4">
+        <div className="mb-4 rounded-3xl border border-border bg-card shadow-card">
             <div className="flex flex-wrap items-center gap-2 p-3">
                 <div className="relative flex-1 min-w-[180px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -333,7 +333,7 @@ export function ApplicationFilters({
                         placeholder="Search by name or handle..."
                         value={value.search}
                         onChange={(e) => update('search', e.target.value)}
-                        className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-brand/50"
+                        className="w-full h-10 pl-9 pr-8 rounded-full border border-border bg-secondary/50 text-sm transition-colors focus:bg-card focus:border-foreground focus:outline-none focus:ring-4 focus:ring-foreground/10"
                     />
                     {value.search && (
                         <button
@@ -350,16 +350,16 @@ export function ApplicationFilters({
                     type="button"
                     onClick={() => setIsOpen((prev) => !prev)}
                     className={cn(
-                        'inline-flex items-center gap-2 h-9 px-3 rounded-lg border text-sm font-medium transition-premium',
+                        'inline-flex items-center gap-2 h-10 px-4 rounded-full border text-sm font-medium transition-premium',
                         isOpen || activeCount > 0
-                            ? 'border-foreground/30 bg-secondary/60 text-foreground'
-                            : 'border-border text-muted-foreground hover:text-foreground',
+                            ? 'border-foreground bg-foreground text-background'
+                            : 'border-border text-foreground/80 hover:border-foreground hover:text-foreground',
                     )}
                 >
                     <SlidersHorizontal className="w-4 h-4" />
                     Filters
                     {activeCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-[#fedc03] text-black text-[10px] font-bold leading-none">
+                        <span className="px-1.5 py-0.5 rounded-full bg-brand text-black text-[10px] font-bold leading-none">
                             {activeCount}
                         </span>
                     )}
@@ -370,7 +370,7 @@ export function ApplicationFilters({
                     <button
                         type="button"
                         onClick={() => onChange(EMPTY_APPLICATION_FILTERS)}
-                        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-premium"
+                        className="inline-flex items-center gap-1.5 h-10 px-3 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-premium"
                     >
                         <X className="w-3.5 h-3.5" />
                         Clear all

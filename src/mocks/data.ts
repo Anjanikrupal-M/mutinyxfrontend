@@ -194,6 +194,175 @@ export const MOCK_CAMPAIGNS = [
             { id: 'inf-005', name: 'Kavya Nair', handle: '@kavyafood', reach: 550000, engagement: 6.8 }
         ]
     },
+    // ── More live campaigns (added for the dashboard's Live campaigns card). Each has a cover,
+    // open applications and a mix of pending work, so every part of a campaign card has data. ──
+    {
+        id: 'camp-006',
+        name: 'Monsoon Street Style Lookbook',
+        type: 'influencer' as const,
+        visibility: 'public' as const,
+        objective: 'awareness',
+        status: 'active' as const,
+        budget: {
+            mode: 'paid' as const,
+            tierPricing: [
+                { tier: 'micro' as const, amount: 9000 },
+                { tier: 'mid' as const, amount: 18000 },
+            ],
+            total: 180000,
+            platformFeePercent: DEFAULT_PLATFORM_FEE_PERCENT,
+        },
+        location: 'Bengaluru, India',
+        niche: ['Fashion', 'Lifestyle'],
+        creatorSize: 'mid' as const,
+        creatorsInvited: 20,
+        creatorsAccepted: 11,
+        applicationsCount: 37,
+        pendingApplications: 6,
+        pendingScripts: 2,
+        pendingSubmissions: 1,
+        progress: 35,
+        createdAt: '2026-10-05T10:00:00Z',
+        deadline: '2026-11-20T23:59:59Z',
+        applicationDeadline: '2026-10-28T23:59:59Z',
+        thumbnail: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=480&h=480&fit=crop&q=70&auto=format',
+        proofOfWorkRequired: true,
+        analytics: {
+            totalLikes: 21800,
+            totalComments: 640,
+            totalShares: 1100,
+            totalReach: 410000,
+            engagementRate: 4.6
+        },
+        topPerformers: [
+            { id: 'inf-001', name: 'Priya Sharma', handle: '@priyasharma', reach: 190000, engagement: 4.9 }
+        ]
+    },
+    {
+        id: 'camp-007',
+        name: 'Festive Sweets — Diwali Hampers',
+        type: 'ugc' as const,
+        visibility: 'public' as const,
+        objective: 'sales',
+        status: 'active' as const,
+        budget: {
+            mode: 'paid_product' as const,
+            tierPricing: [
+                { tier: 'nano' as const, amount: 3000 },
+                { tier: 'micro' as const, amount: 6000 },
+            ],
+            total: 90000,
+            platformFeePercent: DEFAULT_PLATFORM_FEE_PERCENT,
+        },
+        location: 'Jaipur, India',
+        niche: ['Food', 'Festive'],
+        creatorSize: 'nano' as const,
+        creatorsInvited: 25,
+        creatorsAccepted: 14,
+        applicationsCount: 41,
+        pendingApplications: 9,
+        pendingProductShipments: 5,
+        pendingScripts: 0,
+        pendingSubmissions: 3,
+        progress: 55,
+        createdAt: '2026-09-25T10:00:00Z',
+        deadline: '2026-11-05T23:59:59Z',
+        applicationDeadline: '2026-10-18T23:59:59Z',
+        thumbnail: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=480&h=480&fit=crop&q=70&auto=format',
+        proofOfWorkRequired: true,
+        analytics: {
+            totalLikes: 15200,
+            totalComments: 980,
+            totalShares: 2300,
+            totalReach: 290000,
+            engagementRate: 6.4
+        },
+        topPerformers: [
+            { id: 'inf-005', name: 'Kavya Nair', handle: '@kavyafood', reach: 140000, engagement: 6.9 }
+        ]
+    },
+    {
+        id: 'camp-008',
+        name: 'FitFuel Protein — 30-Day Challenge',
+        type: 'influencer' as const,
+        visibility: 'private' as const,
+        objective: 'sales',
+        status: 'active' as const,
+        budget: {
+            mode: 'paid' as const,
+            tierPricing: [
+                { tier: 'micro' as const, amount: 12000 },
+                { tier: 'macro' as const, amount: 40000 },
+            ],
+            total: 240000,
+            platformFeePercent: DEFAULT_PLATFORM_FEE_PERCENT,
+        },
+        location: 'Pune, India',
+        niche: ['Fitness', 'Health'],
+        creatorSize: 'micro' as const,
+        creatorsInvited: 15,
+        creatorsAccepted: 9,
+        applicationsCount: 15,
+        pendingApplications: 0,
+        pendingScripts: 4,
+        pendingSubmissions: 0,
+        progress: 20,
+        createdAt: '2026-10-07T10:00:00Z',
+        deadline: '2026-12-10T23:59:59Z',
+        applicationDeadline: '2026-10-25T23:59:59Z',
+        thumbnail: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=480&h=480&fit=crop&q=70&auto=format',
+        proofOfWorkRequired: true,
+        analytics: {
+            totalLikes: 6400,
+            totalComments: 210,
+            totalShares: 380,
+            totalReach: 120000,
+            engagementRate: 5.3
+        },
+        topPerformers: [
+            { id: 'inf-006', name: 'Vikram Singh', handle: '@vikramfit', reach: 95000, engagement: 6.1 }
+        ]
+    },
+    {
+        id: 'camp-009',
+        name: 'Indie Coffee Roasters — Café Hop',
+        type: 'influencer' as const,
+        visibility: 'public' as const,
+        objective: 'awareness',
+        status: 'active' as const,
+        budget: {
+            mode: 'product' as const,
+            tierPricing: [],
+            total: 0,
+            platformFeePercent: DEFAULT_PLATFORM_FEE_PERCENT,
+        },
+        location: 'Chennai, India',
+        niche: ['Food', 'Travel'],
+        creatorSize: 'micro' as const,
+        creatorsInvited: 18,
+        creatorsAccepted: 7,
+        applicationsCount: 22,
+        pendingApplications: 4,
+        pendingProductShipments: 2,
+        pendingScripts: 1,
+        pendingSubmissions: 2,
+        progress: 70,
+        createdAt: '2026-09-12T10:00:00Z',
+        deadline: '2026-10-30T23:59:59Z',
+        applicationDeadline: '2026-10-14T23:59:59Z',
+        thumbnail: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=480&h=480&fit=crop&q=70&auto=format',
+        proofOfWorkRequired: false,
+        analytics: {
+            totalLikes: 18900,
+            totalComments: 720,
+            totalShares: 1500,
+            totalReach: 330000,
+            engagementRate: 5.8
+        },
+        topPerformers: [
+            { id: 'inf-005', name: 'Kavya Nair', handle: '@kavyafood', reach: 160000, engagement: 6.0 }
+        ]
+    },
 ];
 
 export const MOCK_INFLUENCERS = [

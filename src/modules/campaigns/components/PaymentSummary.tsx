@@ -13,10 +13,10 @@ export function PaymentSummary({ title, summary }: PaymentSummaryProps) {
     const carriedCredit = summary.carriedCreditTotal ?? 0;
     const grossInfluencerTotal = summary.influencerTotal + carriedCredit;
     return (
-        <div className="overflow-hidden rounded-xl border border-border/70">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             <div className="flex items-center justify-between gap-2 bg-secondary/40 px-3.5 py-2.5">
                 <h4 className="text-[13px] font-semibold">{title}</h4>
-                <span className="shrink-0 rounded-full bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <span className="shrink-0 rounded-full bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
                     {summary.count} creator{summary.count === 1 ? '' : 's'}
                 </span>
             </div>
