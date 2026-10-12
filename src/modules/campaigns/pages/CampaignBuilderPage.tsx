@@ -5,6 +5,7 @@ import type { Campaign } from '@/shared/types/campaign';
 import type { LucideIcon } from 'lucide-react';
 import {
     Activity,
+    ArrowDownToLine,
     ArrowLeft,
     ArrowRight,
     Baby,
@@ -2721,9 +2722,13 @@ export default function CampaignBuilderPage() {
                         onClick={handleSaveDraft}
                         disabled={createCampaignMutation.isPending || updateCampaignMutation.isPending}
                         title="Save this campaign as a draft"
-                        className="flex h-9 items-center gap-2 rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-foreground/80 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-foreground hover:text-foreground hover:shadow-float active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
+                        className="group/draft flex h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-foreground shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-foreground hover:shadow-float active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
                     >
-                        <Save className="h-4 w-4" />
+                        {/* The disk at rest; on hover it gives way to an arrow dropping into a tray. */}
+                        <span className="relative h-4 w-4 overflow-hidden">
+                            <Save className="absolute inset-0 h-4 w-4 transition-all duration-300 group-hover/draft:-translate-y-4 group-hover/draft:opacity-0" />
+                            <ArrowDownToLine className="absolute inset-0 h-4 w-4 translate-y-4 opacity-0 transition-all duration-300 group-hover/draft:translate-y-0 group-hover/draft:opacity-100" />
+                        </span>
                         Save draft
                     </button>
                 )}
@@ -2732,14 +2737,16 @@ export default function CampaignBuilderPage() {
                     aria-pressed={activeTab === 'ai'}
                     onClick={() => setActiveTab('ai')}
                     className={cn(
-                        'mode-btn flex h-9 items-center gap-2 rounded-full border px-4 text-[13px] font-semibold shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97]',
-                        activeTab === 'ai'
-                            ? 'border-foreground bg-foreground text-background'
-                            : 'border-border bg-card text-foreground/80 hover:border-foreground hover:text-foreground',
+                        'mode-btn group/ai relative flex h-10 items-center gap-2 overflow-hidden rounded-full bg-foreground pl-1 pr-4 text-[13px] font-semibold text-background shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97]',
+                        activeTab === 'ai' && 'ring-2 ring-brand ring-offset-2 ring-offset-background',
                     )}
                 >
-                    <Sparkles className="mode-icon mode-icon-sparkles h-4 w-4" />
-                    AI Strategist
+                    {/* A soft light sweeps across on hover */}
+                    <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent transition-all duration-700 ease-out group-hover/ai:left-[120%]" />
+                    <span className="relative grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
+                        <Sparkles className="mode-icon mode-icon-sparkles h-3.5 w-3.5 transition-transform duration-500 group-hover/ai:rotate-12 group-hover/ai:scale-110" />
+                    </span>
+                    <span className="relative">AI Strategist</span>
                 </button>
             </div>
         </div>
@@ -3268,7 +3275,7 @@ export default function CampaignBuilderPage() {
                                         }
                                     >
                                         <div data-invalid={Boolean(errors.niche)}>
-                                            <div className="flex flex-wrap gap-2.5 pt-1">
+                                            <div className="flex flex-wrap gap-2 pt-1">
                                                 {/* Selected niches move to the front, in the order they were picked; the rest keep their usual order. */}
                                                 {[
                                                     ...form.niche.flatMap((k) => NICHE_CATEGORIES.filter((c) => c.key === k)),
@@ -3276,32 +3283,26 @@ export default function CampaignBuilderPage() {
                                                 ].map(({ key, label, icon: Icon }) => {
                                                     const selected = form.niche.includes(key);
                                                     return (
-                                                        // Icon only; the name pops up on hover, and a selected niche opens out to show it.
+                                                        // Icon and name together, always visible; a picked niche gets a small tick at the end.
                                                         <button
                                                             key={key}
                                                             type="button"
                                                             aria-pressed={selected}
-                                                            aria-label={label}
                                                             disabled={!selected && form.niche.length >= MAX_NICHES}
                                                             onClick={() => {
                                                                 update('niche', selected ? form.niche.filter((k) => k !== key) : [...form.niche, key]);
                                                                 clearError('niche');
                                                             }}
                                                             className={cn(
-                                                                'group relative flex h-11 min-w-11 items-center justify-center gap-2 rounded-full text-[13px] font-medium disabled:opacity-40',
-                                                                selected ? 'pl-3.5 pr-4' : 'px-0',
+                                                                'group flex h-10 items-center gap-2 rounded-full pl-3 pr-4 text-[13px] font-medium disabled:opacity-70',
                                                                 choiceClass(selected),
                                                             )}
                                                         >
-                                                            <Icon className="h-[18px] w-[18px] shrink-0 stroke-[1.75] transition-transform duration-200 group-enabled:group-hover:scale-110" />
-                                                            {selected && <span className="animate-pop whitespace-nowrap">{label}</span>}
-                                                            {!selected && (
-                                                                <span
-                                                                    role="tooltip"
-                                                                    className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-full bg-foreground px-2.5 py-1 text-xs font-medium text-background opacity-0 shadow-float transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
-                                                                >
-                                                                    {label}
-                                                                    <span className="absolute left-1/2 top-full -ml-1 -mt-1 h-2 w-2 rotate-45 bg-foreground" />
+                                                            <Icon className="h-4 w-4 shrink-0 stroke-[1.75] transition-transform duration-200 group-enabled:group-hover:scale-110" />
+                                                            <span className="whitespace-nowrap">{label}</span>
+                                                            {selected && (
+                                                                <span className="-mr-1.5 grid h-5 w-5 shrink-0 animate-pop place-items-center rounded-full bg-foreground text-brand">
+                                                                    <Check className="h-3 w-3 stroke-[3]" />
                                                                 </span>
                                                             )}
                                                         </button>
