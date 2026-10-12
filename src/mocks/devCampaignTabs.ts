@@ -273,6 +273,12 @@ const sum = (rows: DemoProofOfWork[], pick: (row: DemoProofOfWork) => number) =>
 
 // ── What the hooks call ──
 
+/** Synchronous look-ups for the demo API responder (devApi.ts): one campaign's roster and posts. */
+export function demoRosterSnapshot(campaignId: string): { campaign: Campaign; roster: CampaignInfluencer[]; proofs: DemoProofOfWork[] } | null {
+    const found = rosterFor(campaignId);
+    return found ? { ...found, proofs: buildProofs(found.campaign, found.roster) } : null;
+}
+
 /**
  * The campaign as its detail page should see it: the Overview tab's performance figures become the
  * totals of the very posts the Analytics tab lists, so the two tabs always agree. (The sample

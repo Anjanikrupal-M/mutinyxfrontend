@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/shared/components/PageHeader';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { useAnalyticsOverview, type AnalyticsOverviewFormat } from './hooks/useAnalytics';
 import { instagramContentFormatLabel, type InstagramAnalyticsFormat } from '@/modules/campaigns/utils/instagramContentFormat';
 
@@ -64,8 +65,13 @@ export default function AnalyticsPage() {
                 actions={<button type="button" onClick={() => window.print()} className="analytics-print-hide inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold"><Download className="h-3.5 w-3.5" />Download PDF</button>}
             />
 
-            <div className="analytics-print-hide flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Instagram formats">
-                {formats.map((section) => <button key={section.format} type="button" role="tab" aria-selected={selected === section.format} onClick={() => setSelected(section.format)} className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold ${selected === section.format ? 'border-foreground bg-foreground text-background' : 'bg-card hover:bg-secondary'}`}>{section.label}</button>)}
+            <div className="analytics-print-hide overflow-x-auto pb-1">
+                <SegmentedTabs<InstagramAnalyticsFormat>
+                    ariaLabel="Instagram formats"
+                    value={selected}
+                    onChange={setSelected}
+                    items={formats.map((section) => ({ value: section.format, label: section.label }))}
+                />
             </div>
 
             <section className="space-y-5 rounded-2xl border bg-card p-4 sm:p-6">

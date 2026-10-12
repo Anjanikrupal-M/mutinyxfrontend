@@ -7,6 +7,8 @@ interface CampaignFitRingProps {
     fit: CampaignFitResult;
     /** Outer diameter in px. */
     size?: number;
+    /** Show the "Campaign fit" pill under the ring. Off where the ring sits in a tile that already names it. */
+    showLabel?: boolean;
     className?: string;
 }
 
@@ -18,7 +20,7 @@ interface CampaignFitRingProps {
  * Built on Popover rather than HoverCard because Popover renders in a portal: the cards clip
  * their overflow, and a breakdown drawn inside the card was cut off at its bottom edge.
  */
-export function CampaignFitRing({ fit, size = 44, className }: CampaignFitRingProps) {
+export function CampaignFitRing({ fit, size = 44, showLabel = true, className }: CampaignFitRingProps) {
     const strokeWidth = 4;
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
@@ -63,9 +65,11 @@ export function CampaignFitRing({ fit, size = 44, className }: CampaignFitRingPr
                         </span>
                     </button>
                 </PopoverTrigger>
-                <span className="whitespace-nowrap rounded-full bg-foreground px-1.5 py-px text-[8px] font-bold uppercase leading-tight tracking-[0.06em] text-brand">
-                    Campaign fit
-                </span>
+                {showLabel && (
+                    <span className="whitespace-nowrap rounded-full bg-foreground px-1.5 py-px text-[8px] font-bold uppercase leading-tight tracking-[0.06em] text-brand">
+                        Campaign fit
+                    </span>
+                )}
             </span>
             <PopoverContent
                 align="end"

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
     AlertCircle,
     ArrowLeft,
+    ArrowRight,
+    ArrowUp,
+    ArrowUpRight,
     BarChart3,
     Calendar,
     Check,
@@ -11,6 +14,7 @@ import {
     History,
     Image as ImageIcon,
     Loader2,
+    Plus,
     RefreshCw,
     Rocket,
     Sparkles,
@@ -1687,6 +1691,8 @@ export default function AIStrategistChat({
     // Uses smooth behavior so it feels like ChatGPT — messages scroll into view naturally.
     useEffect(() => {
         if (stage !== 'step1') return;
+        // Nothing said yet (a fresh load or refresh): stay at the top, so the welcome and examples show.
+        if (messages.length === 0 && !isThinking) return;
         const el = messagesContainerRef.current;
         if (!el) return;
         // requestAnimationFrame ensures the DOM has painted the new message before scrolling
@@ -1965,47 +1971,61 @@ export default function AIStrategistChat({
     const stepLabels = ['Prompt', 'Details', 'Building', 'Strategy'] as const;
     const activeStepIndex = stage === 'step1' ? 0 : stage === 'step2' ? 1 : stage === 'step3' ? 2 : 3;
 
+    // Where the brand is in the AI flow: a slim strip of numbered pills (done ✓, current yellow).
     const StepHeader = () => (
-        <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center gap-3">
-                {stage !== 'step2' && (
-                    <div>
-                        <h2 className="text-2xl font-bold mt-1">{stepLabels[activeStepIndex]}</h2>
-                    </div>
-                )}
-            </div>
-        </div>
+        stage === 'step2' ? null : (
+            <ol className="mb-4 flex w-fit items-center gap-1.5 rounded-full border border-border bg-card p-1 pr-3 shadow-sm">
+                {stepLabels.map((label, i) => {
+                    const done = i < activeStepIndex;
+                    const current = i === activeStepIndex;
+                    return (
+                        <li key={label} className="flex items-center gap-1.5">
+                            {i > 0 && <span aria-hidden className={cn('h-px w-4 sm:w-6', done || current ? 'bg-foreground/40' : 'bg-border')} />}
+                            <span className={cn(
+                                'grid h-6 w-6 place-items-center rounded-full text-[11px] font-semibold transition-colors',
+                                current || done ? 'bg-brand text-black' : 'border border-border text-muted-foreground',
+                            )}>
+                                {done ? <Check className="h-3 w-3 stroke-[3]" /> : i + 1}
+                            </span>
+                            <span className={cn('hidden text-xs sm:inline', current ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground')}>{label}</span>
+                        </li>
+                    );
+                })}
+            </ol>
+        )
     );
 
     const filledCount = fieldSummaryRows.filter((r) => r.ok).length;
     const totalFields = fieldSummaryRows.length;
 
     const FieldPanel = () => (
-        <div className="bg-card border border-border rounded-2xl flex flex-col shadow-sm overflow-hidden">
-            <div className="px-3 pt-3 pb-2 border-b border-border">
+        <div className="bg-card border border-border rounded-3xl flex flex-col shadow-card overflow-hidden">
+            <div className="px-4 pt-4 pb-3 border-b border-border">
                 <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs font-semibold">Campaign Fields</h3>
-                    <span className="text-[10px] font-semibold text-[#0a0a0a] bg-[#fedc03]/15 px-1.5 py-0.5 rounded-full">{filledCount}/{totalFields}</span>
+                    <h3 className="font-display text-sm font-semibold tracking-tight">Campaign fields</h3>
+                    <span className="text-[11px] font-semibold tabular-nums text-foreground bg-brand/20 px-2 py-0.5 rounded-full">{filledCount}/{totalFields}</span>
                 </div>
-                <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-[#fedc03] rounded-full transition-all duration-500"
+                        className="h-full bg-brand rounded-full transition-all duration-500"
                         style={{ width: `${Math.round((filledCount / totalFields) * 100)}%` }}
                     />
                 </div>
             </div>
-            <div className="p-2 space-y-0 flex-1 overflow-y-auto">
+            <div className="p-2 space-y-0.5 flex-1 overflow-y-auto">
                 {fieldSummaryRows.map((row) => (
-                    <div key={row.label} className="flex items-center justify-between gap-1 px-1 py-1 rounded-lg hover:bg-secondary/50 transition-colors">
-                        <span className="text-[11px] text-muted-foreground">{row.label}</span>
-                        <div className="flex items-center gap-1 min-w-0">
-                            {row.ok ? (
-                                <span className="text-[11px] font-medium text-foreground truncate max-w-[80px]">{row.value}</span>
-                            ) : (
-                                <span className="text-[11px] text-muted-foreground/50">—</span>
-                            )}
-                            <span className={cn('w-1 h-1 rounded-full shrink-0', row.ok ? 'bg-emerald-500' : 'bg-amber-500/60')} />
-                        </div>
+                    <div key={row.label} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl hover:bg-secondary/50 transition-colors">
+                        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className={cn('grid h-4 w-4 shrink-0 place-items-center rounded-full', row.ok ? 'bg-brand text-black' : 'border border-dashed border-foreground/25')}>
+                                {row.ok && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                            </span>
+                            <span className={cn(row.ok && 'text-foreground')}>{row.label}</span>
+                        </span>
+                        {row.ok ? (
+                            <span className="text-xs font-semibold text-foreground truncate max-w-[110px]">{row.value}</span>
+                        ) : (
+                            <span className="text-xs text-muted-foreground/40">—</span>
+                        )}
                     </div>
                 ))}
             </div>
@@ -2040,9 +2060,8 @@ export default function AIStrategistChat({
 
     const chatEndRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, [chatTranscript, isThinking]);
+    // No scrollIntoView here: it scrolled the whole page, not just the chat, so a refresh landed
+    // mid-page. The effect above scrolls only the messages box.
 
     const ChatBubble = ({ role, content }: { role: 'user' | 'assistant'; content: string }) => (
         <div className={cn('flex w-full gap-3 px-4 py-1', role === 'user' ? 'justify-end' : 'justify-start')}>
@@ -4313,19 +4332,25 @@ export default function AIStrategistChat({
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1.2fr,320px] gap-6 min-h-0 px-2 items-start">
                 {/* Chat Container — flex column so messages scroll and input stays pinned */}
-                <div className="bg-card border border-border rounded-2xl flex flex-col shadow-sm overflow-hidden sticky top-24 md:h-[calc(100dvh-200px)] h-[calc(100dvh-220px)] min-h-[500px]">
-                    {/* Chat Header */}
-                    <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-card">
-                        <div className="w-9 h-9 rounded-xl bg-[#fedc03] text-black flex items-center justify-center font-bold text-sm shadow">
+                <div className="bg-card border border-border rounded-3xl flex flex-col shadow-card overflow-hidden sticky top-24 md:h-[calc(100dvh-200px)] h-[calc(100dvh-220px)] min-h-[500px]">
+                    {/* Chat Header — a soft yellow glow behind the strategist's mark */}
+                    <div className="relative flex items-center gap-3 overflow-hidden px-5 py-4 border-b border-border bg-card">
+                        <span aria-hidden className="pointer-events-none absolute -left-10 -top-16 h-36 w-64 rounded-full bg-brand/20 blur-3xl" />
+                        <div className="relative w-10 h-10 rounded-full bg-brand text-black flex items-center justify-center font-bold text-sm shadow-[0_6px_18px_-6px_rgb(250_203_3_/_0.9)]">
                             <Sparkles className="w-4 h-4" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <h2 className="text-sm font-bold">MutinyX AI Strategist</h2>
-                            <p className="text-[11px] text-muted-foreground">Describe your campaign naturally — I'll build the strategy</p>
+                        <div className="relative flex-1 min-w-0">
+                            <h2 className="flex items-center gap-2 font-display text-base font-semibold tracking-tight">
+                                MutinyX AI Strategist
+                                <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 font-sans text-[10px] font-semibold text-emerald-700">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Online
+                                </span>
+                            </h2>
+                            <p className="text-xs text-muted-foreground">Describe your campaign naturally — I'll build the strategy</p>
                         </div>
                         <button
                             onClick={() => setShowHistoryModal(true)}
-                            className="text-xs text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-lg hover:bg-secondary transition-colors flex items-center gap-1.5"
+                            className="relative flex h-8 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-semibold text-foreground/80 transition-colors hover:border-foreground hover:text-foreground"
                             title="View chat history"
                         >
                             <History className="w-3.5 h-3.5" />
@@ -4333,8 +4358,9 @@ export default function AIStrategistChat({
                         </button>
                         <button
                             onClick={handleStartOver}
-                            className="text-xs text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-lg hover:bg-secondary transition-colors"
+                            className="relative flex h-8 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-semibold text-foreground/80 transition-colors hover:border-foreground hover:text-foreground"
                         >
+                            <Plus className="h-3.5 w-3.5" />
                             New chat
                         </button>
                     </div>
@@ -4352,15 +4378,20 @@ export default function AIStrategistChat({
                                 />
                                 {/* Quick-start prompts shown inside the message stream */}
                                 <div className="px-4 pt-3">
-                                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-3">Try an example</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-foreground/80">
+                                        <Sparkles className="h-3.5 w-3.5" /> Try an example
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                         {SAMPLE_PROMPTS.map((sample) => (
                                             <button
                                                 key={sample}
                                                 onClick={() => setPromptText(sample)}
-                                                className="text-left p-3 rounded-xl border border-border bg-card hover:border-[#fedc03]/50 hover:bg-[#fedc03]/5 transition-all text-[11px] leading-relaxed text-muted-foreground"
+                                                className="group/sample flex items-start gap-2.5 text-left p-3.5 rounded-2xl border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-brand hover:shadow-card"
                                             >
-                                                {sample}
+                                                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/15 text-foreground ring-1 ring-brand/40 transition-colors duration-200 group-hover/sample:bg-brand">
+                                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                                </span>
+                                                <span className="text-xs leading-5 text-foreground/75 group-hover/sample:text-foreground">{sample}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -4548,7 +4579,7 @@ export default function AIStrategistChat({
 
                     {/* Input Bar — shrink-0 keeps it firmly pinned at the bottom */}
                     <div className="shrink-0 border-t border-border bg-card p-4">
-                        <div className="flex items-end gap-3 bg-background border border-border rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-[#fedc03]/30 focus-within:border-[#fedc03]/50 transition-all">
+                        <div className="flex items-end gap-3 bg-card border border-border rounded-2xl px-4 py-2.5 shadow-sm transition-all focus-within:border-foreground focus-within:ring-4 focus-within:ring-foreground/10">
                             <textarea
                                 ref={promptInputRef}
                                 value={promptText}
@@ -4567,15 +4598,15 @@ export default function AIStrategistChat({
                             <button
                                 onClick={handleStep1Continue}
                                 disabled={isThinking || isLoadingSession || !promptText.trim()}
-                                className="shrink-0 w-9 h-9 rounded-lg bg-[#fedc03] text-black flex items-center justify-center hover:bg-[#f0d000] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                                className="group/send shrink-0 w-10 h-10 rounded-full bg-brand text-black flex items-center justify-center transition-all hover:-translate-y-0.5 hover:shadow-float disabled:translate-y-0 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed disabled:shadow-none"
                                 title={!promptText.trim() ? 'Please type a message to start the chat' : undefined}
                             >
                                 {isThinking || isLoadingSession
                                     ? <Loader2 className="w-4 h-4 animate-spin" />
-                                    : <ChevronRight className="w-4 h-4" />}
+                                    : <ArrowUp className="w-4 h-4 transition-transform group-hover/send:-translate-y-0.5" />}
                             </button>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+                        <p className="text-[11px] text-muted-foreground mt-2 text-center">
                             {!promptText.trim() ? 'Type a message to start the chat' : (!isInitialPromptSufficient(promptText) ? 'Short messages allowed — AI will ask clarifying questions' : 'Shift + Enter for new line · Enter to send')}
                         </p>
                     </div>
@@ -4583,15 +4614,15 @@ export default function AIStrategistChat({
 
                 {/* Right Sidebar */}
                 <div className="space-y-4 pr-1 sticky top-24 max-h-[calc(100dvh-200px)] overflow-y-auto custom-scrollbar">
-                    <div className="bg-card border border-border rounded-2xl p-4 shrink-0">
+                    <div className="bg-card border border-border rounded-3xl p-4 shrink-0 shadow-card">
                         <button
                             onClick={handleContinueWithAvailableDetails}
                             disabled={messages.length === 0}
                             title={messages.length === 0 ? 'Start the chat first to extract campaign details' : undefined}
-                            className="w-full px-4 py-2.5 rounded-xl bg-[#fedc03] text-black text-sm font-semibold hover:bg-[#f0d000] transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#fedc03]"
+                            className="group/cont w-full h-11 px-4 rounded-full bg-brand text-black text-sm font-semibold transition-all hover:-translate-y-0.5 hover:shadow-float inline-flex items-center justify-center gap-2 disabled:translate-y-0 disabled:bg-secondary disabled:text-muted-foreground disabled:shadow-none disabled:cursor-not-allowed"
                         >
                             Continue with available details
-                            <ChevronRight className="w-4 h-4" />
+                            <ArrowRight className="w-4 h-4 transition-transform group-hover/cont:translate-x-1" />
                         </button>
                         {messages.length === 0 && (
                             <p className="text-[11px] text-muted-foreground text-center mt-2">Start the chat above first</p>
@@ -4601,7 +4632,7 @@ export default function AIStrategistChat({
                     {!isConversational && <FieldPanel />}
 
                     {sessions && sessions.length > 0 && (
-                        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+                        <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-card">
                             <div className="px-4 pt-4 pb-2 border-b border-border">
                                 <p className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground">
                                     <Clock className="w-3.5 h-3.5" /> Recent

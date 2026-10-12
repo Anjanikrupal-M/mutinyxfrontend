@@ -2,6 +2,7 @@ import { useParams, Link, useSearchParams, useNavigate, useLocation } from 'reac
 import { useEffect, useState, useRef } from 'react';
 import { ArrowLeft, Users, FileText, Send, BarChart3, CheckCircle2, Clock, Kanban, LockKeyhole, Globe, Video, Smile, MessageSquare, LucideIcon, TrendingUp, Loader2, MoreVertical, Rocket, UserPlus, Sparkles, Award, Layers, Edit2, Link2, Ban, Copy, Check, X, MapPin, CalendarDays, CalendarClock, UserRound, Eye, Languages, Wallet, Percent, UserCheck, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { ApiImage } from '@/shared/components/ApiImage';
 import { CampaignStatusBadge } from '../components/CampaignStatusBadge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
@@ -626,30 +627,23 @@ export default function CampaignDetailPage() {
             )}
 
             {/* Pipeline Tabs */}
-            <div className="-mx-3 sm:mx-0 px-3 sm:px-0 flex items-stretch gap-1 mb-4 sm:mb-6 border-b border-border overflow-x-auto scrollbar-hide">
-                {visibleTabs.map((tab) => (
-                    <button
-                        key={tab.key}
-                        // replace, not push: otherwise every tab click stacks a history entry and
-                        // the browser's Back button walks backwards through tabs instead of
-                        // returning to the campaign list. `state` must be carried over by hand —
-                        // a replace without it drops listSearch and breaks Back after a tab click.
-                        onClick={() => setParams({ tab: tab.key }, { replace: true, state: navState })}
-                        className={cn(
-                            'flex min-w-[86px] sm:min-w-0 flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-2.5 text-[11px] sm:text-sm font-medium transition-premium relative whitespace-nowrap rounded-t-lg',
-                            activeTab === tab.key ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                        )}
-                    >
-                        <tab.icon className="w-4 h-4" />
-                        {tab.label}
-                        {tabCounts[tab.key] !== undefined && tabCounts[tab.key] > 0 && (
-                            <span className="ml-1 opacity-60">
-                                ({tabCounts[tab.key]})
-                            </span>
-                        )}
-                        {activeTab === tab.key && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#fedc03]" />}
-                    </button>
-                ))}
+            <div className="-mx-3 mb-4 overflow-x-auto px-3 pb-1 scrollbar-hide sm:mx-0 sm:mb-6 sm:px-0">
+                {/* replace, not push: otherwise every tab click stacks a history entry and the browser's
+                    Back button walks backwards through tabs instead of returning to the campaign list.
+                    `state` must be carried over by hand — a replace without it drops listSearch and
+                    breaks Back after a tab click. */}
+                <SegmentedTabs
+                    ariaLabel="Campaign sections"
+                    value={activeTab}
+                    onChange={(key) => setParams({ tab: key }, { replace: true, state: navState })}
+                    items={visibleTabs.map((tab) => ({
+                        value: tab.key,
+                        label: tab.label,
+                        icon: tab.icon,
+                        count: tabCounts[tab.key] !== undefined && tabCounts[tab.key] > 0 ? tabCounts[tab.key] : undefined,
+                    }))}
+                   
+                />
             </div>
 
             {/* Tab Content */}
@@ -809,18 +803,18 @@ export function OverviewTab({ campaign, influencers, isReadOnly }: { campaign: C
                 {/* Details — brief on top, facts as a tile grid, lists as chips; nothing stretches
                     a label and its value to opposite edges of a wide card. */}
                 <OverviewCard icon={FileText} title="Details" description="The brief and the terms creators see.">
-                    <div className="space-y-5">
+                    <div className="space-y-3">
 
                     {campaign.brief && (
-                        <div className="rounded-2xl border-l-[3px] border-brand bg-secondary/40 px-4 py-3.5">
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Brief</p>
-                            <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{campaign.brief}</p>
+                        <div className="rounded-xl border-l-[3px] border-brand bg-secondary/40 px-3.5 py-2.5">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Brief</p>
+                            <p className="mt-0.5 text-[13px] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">{campaign.brief}</p>
                         </div>
                     )}
 
                     {getIsBrandScript(campaign) && <BrandScriptBlock campaign={campaign} />}
 
-                    <dl className="grid grid-cols-1 min-[480px]:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
+                    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
                         <DetailFact icon={MapPin} label="Location" value={campaign.location || '—'} />
                         <DetailFact icon={CalendarDays} label="Created" value={campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} />
                         <DetailFact icon={CalendarClock} label="Application deadline" value={formattedApplicationDeadline} />
@@ -851,21 +845,21 @@ export function OverviewTab({ campaign, influencers, isReadOnly }: { campaign: C
                             : [];
                         if (niches.length === 0 && contentTypes.length === 0 && tiers.length === 0) return null;
                         return (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            <div className="flex flex-wrap gap-x-8 gap-y-3 border-t border-dashed border-border pt-3">
                                 {niches.length > 0 && (
                                     <DetailChips label="Niches">
-                                        {niches.map((n) => <span key={n} className="rounded-full border border-border px-2.5 py-1 text-xs font-medium [overflow-wrap:anywhere]">{n}</span>)}
+                                        {niches.map((n) => <span key={n} className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium [overflow-wrap:anywhere]">{n}</span>)}
                                     </DetailChips>
                                 )}
                                 {contentTypes.length > 0 && (
                                     <DetailChips label="Content types">
-                                        {contentTypes.map((c) => <span key={c} className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{c}</span>)}
+                                        {contentTypes.map((c) => <span key={c} className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium">{c}</span>)}
                                     </DetailChips>
                                 )}
                                 {tiers.length > 0 && (
                                     <DetailChips label="Tier pricing">
                                         {tiers.map((tp) => (
-                                            <span key={tp.tier} className="rounded-full bg-brand/15 px-2.5 py-1 text-xs">
+                                            <span key={tp.tier} className="rounded-full bg-brand/15 px-2 py-0.5 text-[11px]">
                                                 <span className="capitalize font-medium">{tp.tier}</span> <span className="font-semibold tabular-nums">₹{(tp.amount ?? 0).toLocaleString('en-IN')}</span>
                                             </span>
                                         ))}
@@ -1044,12 +1038,12 @@ function OverviewStat({ icon: Icon, label, hint, value }: { icon: LucideIcon; la
 
 function DetailFact({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
     return (
-        <div className="min-w-0 rounded-2xl border border-border bg-secondary/40 px-3.5 py-3">
-            <dt className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                <Icon className="w-3.5 h-3.5 shrink-0" />
-                {label}
+        <div className="min-w-0 rounded-xl border border-border bg-secondary/40 px-2.5 py-2">
+            <dt className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                <Icon className="w-3 h-3 shrink-0" />
+                <span className="truncate">{label}</span>
             </dt>
-            <dd className="mt-1 text-sm font-semibold leading-snug [overflow-wrap:anywhere]">{value}</dd>
+            <dd className="mt-0.5 text-[13px] font-semibold leading-snug [overflow-wrap:anywhere]">{value}</dd>
         </div>
     );
 }
@@ -1057,8 +1051,8 @@ function DetailFact({ icon: Icon, label, value }: { icon: LucideIcon; label: str
 function DetailChips({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="min-w-0">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-            <div className="flex flex-wrap gap-1.5">{children}</div>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+            <div className="flex flex-wrap gap-1">{children}</div>
         </div>
     );
 }

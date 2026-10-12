@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { API } from '@/core/api';
+import { demoApiResponse } from '@/mocks/devApi';
 
 export const http = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -29,6 +30,16 @@ http.interceptors.request.use(
         const token = useAuthStore.getState().token;
         if (token && token !== 'null' && token !== 'undefined' && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
+        }
+        // Demo account only: answer read-only endpoints that have no demo store from devApi.ts,
+        // so those screens show sample data instead of empty states. Everything else goes out.
+        const demo = demoApiResponse(config.method, config.url);
+        if (demo !== undefined) {
+            config.adapter = async () => {
+                // Writes take a moment, like a real round trip, so their loading states are visible.
+                if ((config.method ?? 'get').toLowerCase() !== 'get') await new Promise((r) => setTimeout(r, 1400));
+                return { data: demo, status: 200, statusText: 'OK', headers: {}, config };
+            };
         }
         return config;
     },

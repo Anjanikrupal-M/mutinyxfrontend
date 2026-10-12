@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { SEGMENT_LIST, SEGMENT_TRIGGER } from '@/shared/components/SegmentedTabs';
 import type { AnalyticsAvailability, AudienceBreakdown, InstagramInsightsPayload } from '../influencer-display';
 import { cn } from '@/lib/utils';
 import { ColumnChart, DonutChart, FunnelChart, RankedBars, SplitBar, TrendAreaChart, type ChartSegment } from '@/shared/components/insights/InsightCharts';
@@ -464,7 +465,7 @@ function TopContentSection({ title, items, emptyMessage }: { title: string; item
 function PanelHeader({ verified, children }: { verified?: boolean; children?: ReactNode }) {
   return (
     <div className="flex items-center gap-3 min-w-0">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-foreground text-brand">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40">
         <Instagram className="w-5 h-5" />
       </span>
       <div className="min-w-0">
@@ -643,12 +644,12 @@ export function InstagramInsightsPanel({ insights }: { insights: InstagramInsigh
       )}
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full sm:w-auto sm:inline-grid h-auto grid-cols-3 gap-1 rounded-full bg-secondary p-1">
+        <TabsList className={SEGMENT_LIST}>
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="gap-1.5 rounded-full px-3 sm:px-5 py-1.5 text-xs sm:text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              className={SEGMENT_TRIGGER}
             >
               <tab.icon className="w-3.5 h-3.5" />
               {tab.label}
@@ -799,9 +800,9 @@ export function InstagramInsightsPanel({ insights }: { insights: InstagramInsigh
             </p>
           )}
           <Tabs defaultValue="followers">
-            <TabsList className="h-auto rounded-full bg-secondary p-1">
-              <TabsTrigger value="followers" className="rounded-full px-4 py-1 text-xs data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">Followers</TabsTrigger>
-              <TabsTrigger value="engaged" className="rounded-full px-4 py-1 text-xs data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm">Engaged audience</TabsTrigger>
+            <TabsList className={SEGMENT_LIST}>
+              <TabsTrigger value="followers" className={SEGMENT_TRIGGER}>Followers</TabsTrigger>
+              <TabsTrigger value="engaged" className={SEGMENT_TRIGGER}>Engaged audience</TabsTrigger>
             </TabsList>
             <TabsContent value="followers" className="pt-4">
               <AudienceGroup

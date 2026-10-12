@@ -5,12 +5,14 @@ import {
     Plus, Loader2, Layers, Calendar, TrendingUp,
     Users, X, BookOpen, Tag, ToggleLeft, ToggleRight,
     Sparkles, ChevronLeft, ChevronRight, ArrowRight, ArrowUpRight, Inbox,
+    Check, PenLine, Image as ImageIcon, UploadCloud, RefreshCw, Trash2, Globe, Lock,
 } from 'lucide-react';
 import { InfoTooltip } from '@/shared/components/InfoTooltip';
 import { HireManagerButton } from '@/shared/components/HireManagerButton';
 import { PageExplainer } from '@/shared/components/PageExplainer';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { StatusBadge } from '@/shared/components/StatusBadge';
+import { Tile, Field, Counter, ErrorText, OptionCard, Note, ProgressRing, fieldClass, fieldBorder, useTypingPlaceholder } from '@/shared/components/BentoUi';
 import { usePrograms, useCreateProgram, useUploadProgramThumbnail, useProgramEnrollmentRealtime } from '../hooks/usePrograms';
 import type { Program } from '@/shared/types/campaign';
 import { ApiImage } from '@/shared/components/ApiImage';
@@ -86,7 +88,6 @@ function ProgramCard({ program, className }: { program: Program; className?: str
                         />
                     ) : (
                         <span className="relative block h-full w-full overflow-hidden">
-                            <span aria-hidden className="absolute inset-0 opacity-[0.08] [background-image:radial-gradient(rgb(255_255_255)_1px,transparent_1px)] [background-size:14px_14px]" />
                             <span aria-hidden className="absolute -bottom-6 right-3 select-none font-display text-[120px] font-bold leading-none text-brand/30 transition-transform duration-700 group-hover:-translate-y-1 group-hover:scale-105">
                                 {program.name.charAt(0).toUpperCase()}
                             </span>
@@ -176,42 +177,56 @@ function ProgramCard({ program, className }: { program: Program; className?: str
 
 // ─── Create Program Modal ─────────────────────────────────────────────────────
 
+const PROGRAM_NAME_EXAMPLES = ['Nike Q3 Influencer Drive', 'Monsoon Skincare Squad', 'Festive Foodies 2026'];
+const PROGRAM_DESCRIPTION_MAX = 600;
+
+/**
+ * Create Program — built from the campaign builder's pieces (tiles, fields, counters, choice
+ * cards, progress ring) so both creation flows feel like one product. Form on the left in three
+ * tiles; on the right a live preview of the program card exactly as it will appear in the list.
+ */
 function CreateProgramModal({ onClose, existingPrograms = [] }: { onClose: () => void, existingPrograms?: Program[] }) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [enrollmentOpen, setEnrollmentOpen] = useState(false);
     const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
     const [coverImagePreview, setCoverImagePreview] = useState<string>('');
+    const [dragging, setDragging] = useState(false);
     const [errors, setErrors] = useState<{ name?: string; description?: string; coverImage?: string }>({});
     const { mutate: createProgram, isPending: isCreating } = useCreateProgram();
     const { mutateAsync: uploadThumbnail, isPending: isUploading } = useUploadProgramThumbnail();
+    const namePlaceholder = useTypingPlaceholder(PROGRAM_NAME_EXAMPLES, name.length === 0);
+    const busy = isCreating || isUploading;
 
-    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+    const requiredDone = [name.trim() && !errors.name, description.trim()].filter(Boolean).length;
+    const ready = requiredDone === 2;
+
+    const acceptImage = (file: File | undefined) => {
         if (!file) return;
-
         if (!file.type.startsWith('image/')) {
             setErrors((p) => ({ ...p, coverImage: 'Please select an image file (PNG, JPG, WEBP)' }));
             return;
         }
-
         if (file.size > 5 * 1024 * 1024) {
             setErrors((p) => ({ ...p, coverImage: 'Image must be less than 5MB' }));
             return;
         }
-
         setErrors((p) => ({ ...p, coverImage: undefined }));
         setCoverImageFile(file);
-        const url = URL.createObjectURL(file);
-        setCoverImagePreview(url);
+        setCoverImagePreview(URL.createObjectURL(file));
+    };
+
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        acceptImage(e.target.files?.[0]);
         e.target.value = '';
     };
 
     const handleCreate = () => {
         const newErrors: { name?: string; description?: string } = {};
         if (!name.trim()) newErrors.name = 'Program name is required';
+        else if (errors.name) newErrors.name = errors.name;
         if (!description.trim()) newErrors.description = 'Description is required';
-        setErrors(newErrors);
+        setErrors((p) => ({ ...p, ...newErrors }));
 
         if (Object.keys(newErrors).length > 0) return;
 
@@ -221,7 +236,7 @@ function CreateProgramModal({ onClose, existingPrograms = [] }: { onClose: () =>
                 description: description.trim(),
                 enrollmentOpen,
             },
-            { 
+            {
                 onSuccess: async (createdProgram) => {
                     if (coverImageFile) {
                         try {
@@ -244,205 +259,235 @@ function CreateProgramModal({ onClose, existingPrograms = [] }: { onClose: () =>
         );
     };
 
+    // What the new program's card will look like in the list, from what has been typed so far.
+    const previewProgram = {
+        id: 'preview',
+        name: name.trim() || 'Your program name',
+        description: description.trim() || null,
+        enrollmentOpen,
+        status: 'active',
+        thumbnailUrl: coverImagePreview || null,
+        campaignCount: 0,
+        enrollmentCount: 0,
+        niches: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    } as Program;
+
     const modal = (
         /* Overlay — rendered in a portal so it always sits above everything */
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-            style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            className="fixed inset-0 z-[9999] flex animate-fade-in items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}
         >
             <div
-                className="w-full max-w-xl bg-card rounded-2xl border border-border shadow-2xl flex flex-col"
-                style={{ maxHeight: '92dvh' }}
+                className="flex max-h-[92dvh] w-full max-w-[980px] animate-scale-in flex-col overflow-hidden rounded-[28px] border border-border bg-background shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* ── Header ── */}
-                <div className="px-6 pt-6 pb-5 border-b border-border/60 shrink-0">
-                    <div className="flex items-start justify-between gap-3 mb-1">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-[#fedc03]/20 flex items-center justify-center shrink-0">
-                                <Sparkles className="w-4 h-4 text-[#0a0a0a]" />
-                            </div>
-                            <div>
-                                <h2 className="text-base font-semibold leading-tight">Create Program</h2>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    Set up your program details and enrollment
-                                </p>
-                            </div>
+                {/* ── Header: title on a warm wash, and the builder's "N left / Ready" progress pill ── */}
+                <div className="relative shrink-0 overflow-hidden border-b border-border bg-card px-6 py-5">
+                    <span aria-hidden className="pointer-events-none absolute -left-10 -top-20 h-48 w-72 rounded-full bg-brand/25 blur-3xl" />
+                    <div className="relative flex items-center gap-3">
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-black shadow-[0_6px_18px_-6px_rgb(250_203_3_/_0.9)]">
+                            <Layers className="h-5 w-5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Programs · New</p>
+                            <h2 className="font-display text-xl font-semibold leading-tight tracking-tight">Create a program</h2>
                         </div>
+                        <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs text-muted-foreground shadow-sm sm:flex">
+                            {ready ? (
+                                <span className="grid h-5 w-5 animate-pop place-items-center rounded-full bg-foreground text-background">
+                                    <Check className="h-3 w-3 stroke-[3]" />
+                                </span>
+                            ) : (
+                                <ProgressRing done={requiredDone} total={2} />
+                            )}
+                            {ready
+                                ? <span className="font-medium text-foreground">Ready</span>
+                                : <><span className="font-semibold tabular-nums text-foreground">{2 - requiredDone}</span> left</>}
+                        </span>
                         <button
                             type="button"
                             onClick={onClose}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
+                            disabled={busy}
+                            aria-label="Close"
+                            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-card text-muted-foreground transition-all duration-200 hover:rotate-90 hover:border-foreground hover:text-foreground disabled:opacity-50"
                         >
-                            <X className="w-4 h-4" />
+                            <X className="h-4 w-4" />
                         </button>
                     </div>
                 </div>
 
-                {/* ── Body (no <form> — all buttons are explicit onClick) ── */}
-                <div className="flex flex-col flex-1 min-h-0">
-                    <div className="px-6 py-5 overflow-y-auto flex-1 space-y-5">
-
-                        {/* Program Name */}
-                        <div>
-                            <div className="flex justify-between items-end mb-2">
-                                <label className="block text-sm font-medium">
-                                    Program Name <span className="text-red-500">*</span>
-                                </label>
-                                <span className="text-xs text-muted-foreground">{name.length}/60</span>
-                            </div>
-                            <input
-                                autoFocus
-                                maxLength={60}
-                                type="text"
-                                value={name}
-                                onChange={(e) => { 
-                                    const val = e.target.value;
-                                    setName(val); 
-                                    const duplicate = existingPrograms.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.status !== 'archived');
-                                    if (duplicate) {
-                                        setErrors(p => ({ ...p, name: 'A program with this name already exists in your brand portal.' }));
-                                    } else if (errors.name) {
-                                        setErrors(p => ({ ...p, name: undefined })); 
-                                    }
-                                }}
-                                placeholder="e.g. Nike Q3 Influencer Drive"
-                                className={cn(
-                                    'w-full px-3.5 py-2.5 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-[#fedc03]/30 focus:border-[#fedc03] placeholder:text-muted-foreground/60 transition-colors',
-                                    errors.name ? 'border-red-400' : 'border-border'
-                                )}
-                            />
-                            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
-                        </div>
-
-                        {/* Cover Image */}
-                        <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Cover Image <span className="text-muted-foreground font-normal">(Optional)</span>
-                            </label>
-                            <div className="flex items-start gap-4">
-                                <label className={cn(
-                                    "flex flex-col items-center justify-center w-32 h-32 rounded-xl border-2 border-dashed cursor-pointer hover:bg-secondary/50 transition-colors relative overflow-hidden",
-                                    errors.coverImage ? "border-red-400" : "border-border",
-                                    coverImagePreview ? "border-none bg-black/5" : ""
-                                )}>
-                                    <input 
-                                        type="file" 
-                                        className="hidden" 
-                                        accept="image/png, image/jpeg, image/webp"
-                                        onChange={handleImageSelect}
-                                    />
-                                    {coverImagePreview ? (
-                                        <img src={coverImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 text-muted-foreground p-4 text-center">
-                                            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                                                <Plus className="w-4 h-4" />
-                                            </div>
-                                            <span className="text-xs font-medium">Upload</span>
-                                        </div>
-                                    )}
-                                </label>
-                                {coverImagePreview && (
-                                    <button 
-                                        type="button"
-                                        onClick={() => {
-                                            setCoverImageFile(null);
-                                            setCoverImagePreview('');
+                {/* ── Body: form tiles on the left, live card preview on the right ── */}
+                <div className="flex min-h-0 flex-1 gap-5 overflow-y-auto bg-secondary/40 p-5">
+                    <div className="grid min-w-0 flex-1 grid-cols-12 content-start gap-4">
+                        <Tile icon={PenLine} title="Program identity" description="The name and story creators see first." className="[animation-delay:60ms]">
+                            <Field label="Program name" htmlFor="program-name" required error={errors.name}>
+                                <div className="relative">
+                                    <input
+                                        id="program-name"
+                                        autoFocus
+                                        autoComplete="off"
+                                        maxLength={60}
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setName(val);
+                                            const duplicate = existingPrograms.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.status !== 'archived');
+                                            if (duplicate) {
+                                                setErrors(p => ({ ...p, name: 'A program with this name already exists in your brand portal.' }));
+                                            } else if (errors.name) {
+                                                setErrors(p => ({ ...p, name: undefined }));
+                                            }
                                         }}
-                                        className="text-xs font-medium text-red-500 hover:text-red-600 bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors mt-1"
-                                    >
-                                        Remove
-                                    </button>
-                                )}
-                            </div>
-                            {errors.coverImage && <p className="mt-1.5 text-xs text-red-500">{errors.coverImage}</p>}
-                            <p className="text-xs text-muted-foreground mt-2">Recommended: 16:9 ratio, max 5MB (PNG, JPG, WEBP).</p>
-                        </div>
-
-                        {/* Description — required */}
-                        <div>
-                            <div className="flex justify-between items-end mb-2">
-                                <label className="block text-sm font-medium">
-                                    Description <span className="text-red-500">*</span>
-                                </label>
-                                <span className="text-xs text-muted-foreground">{description.length}/600</span>
-                            </div>
-                            <textarea
-                                rows={3}
-                                maxLength={600}
-                                value={description}
-                                onChange={(e) => { setDescription(e.target.value); if (errors.description) setErrors((p) => ({ ...p, description: undefined })); }}
-                                placeholder="What is this program about? Give influencers a clear idea of the program goals."
-                                className={cn(
-                                    'w-full px-3.5 py-2.5 rounded-xl border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#fedc03]/30 focus:border-[#fedc03] placeholder:text-muted-foreground/60 transition-colors',
-                                    errors.description ? 'border-red-400' : 'border-border'
-                                )}
-                            />
-                            {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description}</p>}
-                        </div>
-
-                        {/* Enrollment toggle */}
-                        <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Enrollment
-                            </label>
-                            <button
-                                type="button"
-                                onClick={() => setEnrollmentOpen(!enrollmentOpen)}
-                                className={cn(
-                                    'w-full flex items-center justify-between gap-4 p-4 rounded-xl border-2 transition-all duration-200 text-left',
-                                    enrollmentOpen
-                                        ? 'border-emerald-500/40 bg-emerald-500/5'
-                                        : 'border-border bg-secondary/30 hover:border-border/80'
-                                )}
-                            >
-                                <div>
-                                    <p className="text-sm font-medium">
-                                        {enrollmentOpen ? '✅ Enrollment Open' : 'Enrollment Closed'}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {enrollmentOpen
-                                            ? 'Influencers can discover and apply to this program'
-                                            : 'Only you can add influencers to campaigns manually'}
-                                    </p>
+                                        placeholder={namePlaceholder}
+                                        className={cn(fieldClass, 'h-11 pr-16', fieldBorder(Boolean(errors.name)))}
+                                    />
+                                    <Counter length={name.length} max={60} className="right-4 top-1/2 -translate-y-1/2" />
                                 </div>
-                                {enrollmentOpen ? (
-                                    <ToggleRight className="w-9 h-9 text-emerald-500 shrink-0" />
-                                ) : (
-                                    <ToggleLeft className="w-9 h-9 text-muted-foreground shrink-0" />
-                                )}
-                            </button>
-                        </div>
+                            </Field>
 
-                    </div>
+                            <Field label="Description" htmlFor="program-description" required error={errors.description}>
+                                <div className="relative">
+                                    <textarea
+                                        id="program-description"
+                                        maxLength={PROGRAM_DESCRIPTION_MAX}
+                                        value={description}
+                                        onChange={(e) => { setDescription(e.target.value); if (errors.description) setErrors((p) => ({ ...p, description: undefined })); }}
+                                        placeholder="What is this program about? Give influencers a clear idea of the goals."
+                                        className={cn(fieldClass, 'block h-[112px] resize-none pb-8 pt-3 leading-6', fieldBorder(Boolean(errors.description)))}
+                                    />
+                                    <Counter length={description.length} max={PROGRAM_DESCRIPTION_MAX} className="bottom-2.5 right-4" />
+                                </div>
+                            </Field>
+                        </Tile>
 
-                    {/* ── Footer ── */}
-                    <div className="px-6 py-4 border-t border-border/60 flex gap-3 shrink-0">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-secondary transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleCreate}
-                            disabled={isCreating || isUploading}
-                            className="flex-1 h-11 px-5 rounded-xl bg-foreground text-background font-medium hover:bg-foreground/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-                        >
-                            {(isCreating || isUploading) ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>{isUploading ? 'Uploading...' : 'Creating...'}</span>
-                                </>
+                        <Tile icon={ImageIcon} title="Cover image" description="16:9 works best · PNG, JPG or WEBP up to 5MB." optional className="[animation-delay:120ms]">
+                            {coverImagePreview ? (
+                                <div className="group/cover relative aspect-[16/7] overflow-hidden rounded-2xl border border-border">
+                                    <img src={coverImagePreview} alt="Cover preview" className="h-full w-full object-cover transition-transform duration-700 group-hover/cover:scale-105" />
+                                    <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                    <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
+                                        <span className="min-w-0 truncate rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
+                                            {coverImageFile?.name}
+                                        </span>
+                                        <span className="flex shrink-0 gap-1.5">
+                                            <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-full bg-white/90 px-3 text-xs font-semibold text-foreground backdrop-blur transition-colors hover:bg-white">
+                                                <input type="file" className="hidden" accept="image/png, image/jpeg, image/webp" onChange={handleImageSelect} />
+                                                <RefreshCw className="h-3.5 w-3.5" /> Replace
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setCoverImageFile(null); setCoverImagePreview(''); }}
+                                                className="flex h-8 items-center gap-1.5 rounded-full bg-white/90 px-3 text-xs font-semibold text-foreground backdrop-blur transition-colors hover:bg-white hover:text-[#E50914]"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" /> Remove
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
                             ) : (
-                                <span>Create Program</span>
+                                <label
+                                    onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                                    onDragLeave={() => setDragging(false)}
+                                    onDrop={(e) => { e.preventDefault(); setDragging(false); acceptImage(e.dataTransfer.files?.[0]); }}
+                                    className={cn(
+                                        'group/drop flex aspect-[16/6] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed text-center transition-all duration-200',
+                                        errors.coverImage ? 'border-destructive' : dragging ? 'border-foreground bg-brand/15' : 'border-border bg-card hover:border-foreground/40 hover:bg-brand/[0.06]',
+                                    )}
+                                >
+                                    <input type="file" className="hidden" accept="image/png, image/jpeg, image/webp" onChange={handleImageSelect} />
+                                    <span className={cn('grid h-11 w-11 place-items-center rounded-full transition-all duration-300 group-hover/drop:-translate-y-0.5', dragging ? 'bg-brand text-black' : 'bg-brand/15 text-foreground ring-1 ring-brand/40 group-hover/drop:bg-brand')}>
+                                        <UploadCloud className="h-5 w-5" />
+                                    </span>
+                                    <span className="text-[13px] font-semibold">{dragging ? 'Drop to upload' : 'Drag an image here, or click to browse'}</span>
+                                    <span className="text-xs text-muted-foreground">Shown at the top of the program card</span>
+                                </label>
                             )}
-                        </button>
+                            <ErrorText message={errors.coverImage} />
+                        </Tile>
+
+                        <Tile icon={Users} title="Enrollment" description="Who can join this program." className="[animation-delay:180ms]">
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                <OptionCard
+                                    icon={Globe}
+                                    title="Open enrollment"
+                                    description="Creators can discover and apply"
+                                    selected={enrollmentOpen}
+                                    onSelect={() => setEnrollmentOpen(true)}
+                                />
+                                <OptionCard
+                                    icon={Lock}
+                                    title="Invite only"
+                                    description="You add creators yourself"
+                                    selected={!enrollmentOpen}
+                                    onSelect={() => setEnrollmentOpen(false)}
+                                />
+                            </div>
+                            <Note key={String(enrollmentOpen)}>
+                                {enrollmentOpen
+                                    ? 'The program shows an “Enrolling” badge and creators can apply right away. You can close it any time.'
+                                    : 'The program stays hidden from creators. Add them to its campaigns yourself; you can open enrollment later.'}
+                            </Note>
+                        </Tile>
                     </div>
+
+                    {/* Live preview — the card as it will look in the programs list. */}
+                    <aside className="sticky top-0 hidden w-[300px] shrink-0 self-start animate-fade-up [animation-delay:200ms] lg:block">
+                        <div className="mb-2 flex items-center justify-between px-1">
+                            <div>
+                                <p className="text-sm font-semibold leading-5">Live preview</p>
+                                <p className="text-xs leading-4 text-muted-foreground">Updates as you type</p>
+                            </div>
+                            <span className="flex items-center gap-1.5 rounded-full bg-card px-2 py-1 text-[10px] font-semibold text-muted-foreground shadow-sm">
+                                <span className="relative flex h-1.5 w-1.5">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand" />
+                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
+                                </span>
+                                Live
+                            </span>
+                        </div>
+                        <div className="pointer-events-none select-none" aria-hidden>
+                            <ProgramCard program={previewProgram} />
+                        </div>
+                        <ul className="mt-4 space-y-2 rounded-2xl border border-border bg-card p-3.5 text-xs text-foreground/80">
+                            <li className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />Add campaigns to it as phases after creating.</li>
+                            <li className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />Enrolled creators can be picked for every phase.</li>
+                        </ul>
+                    </aside>
+                </div>
+
+                {/* ── Footer: the builder's step navigation look ── */}
+                <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-card px-6 py-4">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={busy}
+                        className="flex h-10 items-center gap-1.5 rounded-full px-4 text-[13px] font-medium text-foreground/80 transition-colors hover:bg-secondary disabled:opacity-40"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleCreate}
+                        disabled={busy}
+                        className="group flex h-11 items-center gap-2 rounded-full bg-brand px-6 text-sm font-bold text-black shadow-card transition-all hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-60"
+                    >
+                        {busy ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {isUploading ? 'Uploading cover…' : 'Creating…'}
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                                Create program
+                                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
         </div>

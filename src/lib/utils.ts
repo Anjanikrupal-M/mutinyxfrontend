@@ -7,8 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 
 // Indian financial notation: Cr (crore = 1e7), L (lakh = 1e5), K (thousand)
 export function formatCompactCurrency(value: number): string {
-  if (value >= 1e7) return `${Number((value / 1e7).toFixed(2))} Cr`;
-  if (value >= 1e5) return `${Number((value / 1e5).toFixed(2))} L`;
+  if (value >= 1e7) return `${Number((value / 1e7).toFixed(2))}Cr`;
+  if (value >= 1e5) return `${Number((value / 1e5).toFixed(2))}L`;
   if (value >= 1e3) return `${Number((value / 1e3).toFixed(2))}K`;
   return String(Math.round(value));
 }

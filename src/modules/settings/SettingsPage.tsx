@@ -1,5 +1,7 @@
 import { PageHeader } from '@/shared/components/PageHeader';
-import { Save, User, Lock, Loader2, CreditCard, Receipt, Mail, Phone, KeyRound, ShieldCheck, AlertCircle, CalendarDays } from 'lucide-react';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
+import { ProgressPillButton, useDoneFlash } from '@/shared/components/ProgressPillButton';
+import { Save, User, Lock, Loader2, CreditCard, Receipt, Mail, Phone, KeyRound, ShieldCheck, AlertCircle, CalendarDays, Check, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -21,10 +23,22 @@ const SUBSCRIPTION_TAB = { key: 'subscription', label: 'Subscription', icon: Cre
 // Shared surface + field styles for every Settings section.
 // While a field inside is focused, the card gets a soft yellow outline and lifts slightly.
 const SECTION_CARD = 'animate-fade-up overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-foreground/[0.07] transition-all duration-300 focus-within:-translate-y-0.5 focus-within:shadow-float focus-within:ring-2 focus-within:ring-brand/60';
-const FIELD_INPUT = 'h-11 w-full rounded-xl border border-transparent bg-secondary/60 px-4 text-sm transition-colors placeholder:text-muted-foreground/60 hover:bg-secondary focus:border-foreground/15 focus:bg-card focus:outline-none focus:ring-4 focus:ring-brand/20';
-const FIELD_LABEL = 'mb-2 block text-[13px] font-semibold';
-const FIELD_HINT = 'mt-1.5 text-xs text-muted-foreground';
-const PRIMARY_BUTTON = 'flood-btn group/save flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground pl-1.5 pr-5 text-sm font-semibold text-background duration-300 hover:shadow-float disabled:pointer-events-none disabled:opacity-50 sm:w-auto';
+const FIELD_INPUT = 'h-10 w-full rounded-xl border border-transparent bg-secondary/60 px-4 text-sm transition-colors placeholder:text-muted-foreground/60 hover:bg-secondary focus:border-foreground/15 focus:bg-card focus:outline-none focus:ring-4 focus:ring-brand/20';
+const FIELD_LABEL = 'mb-1.5 block text-[13px] font-semibold';
+// Field tile: label inside the top edge, value below it, icon on the right; the whole tile is the hit area.
+const FIELD_TILE = 'group/tile flex min-h-[60px] cursor-text items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2 transition-all duration-200 hover:border-foreground/25 focus-within:border-foreground/30 focus-within:shadow-card focus-within:ring-4 focus-within:ring-brand/20';
+const TILE_LABEL = 'block text-[11px] font-medium text-muted-foreground transition-colors group-focus-within/tile:text-foreground';
+const TILE_INPUT = 'mt-0.5 block w-full bg-transparent text-[15px] font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground/45 focus:outline-none';
+const FIELD_HINT = 'mt-1 text-[11px] text-muted-foreground';
+
+/** Any phone input ("+91 98765 43210", "919876543210", "98765-43210") → the 10-digit number. */
+const toTenDigits = (value?: string | null) => {
+    let digits = String(value ?? '').replace(/\D/g, '');
+    if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2);
+    return digits.slice(0, 10);
+};
+/** "9876543210" → "98765 43210" (the usual Indian grouping). */
+const formatTenDigits = (digits: string) => (digits.length > 5 ? `${digits.slice(0, 5)} ${digits.slice(5)}` : digits);
 
 interface DecodedToken {
     email: string;
@@ -37,13 +51,13 @@ interface DecodedToken {
 /** Icon tile + title + description used at the top of each Settings section card. */
 function SectionHeader({ icon: Icon, title, description }: { icon: React.ComponentType<{ className?: string }>; title: string; description: string }) {
     return (
-        <div className="flex items-center gap-3 border-b border-foreground/[0.06] px-6 py-5">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground">
-                <Icon className="h-[18px] w-[18px]" />
+        <div className="flex items-center gap-3 border-b border-foreground/[0.06] px-5 py-3.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground">
+                <Icon className="h-4 w-4" />
             </span>
             <div className="min-w-0">
                 <h3 className="font-display text-base font-bold tracking-tight">{title}</h3>
-                <p className="text-[13px] text-muted-foreground">{description}</p>
+                <p className="text-xs text-muted-foreground">{description}</p>
             </div>
         </div>
     );
@@ -136,12 +150,17 @@ function SubscriptionTab() {
                 )}
             </div>
 
-            <div className="flex justify-end border-t border-foreground/[0.06] bg-secondary/30 px-6 py-4">
-                <Link to="/subscription" className={PRIMARY_BUTTON}>
-                    <span className="flood-btn-icon grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
+            <div className="flex justify-end border-t border-foreground/[0.06] px-5 py-3">
+                {/* Same pill as the save buttons; it opens another page, so an arrow slides in on hover. */}
+                <Link
+                    to="/subscription"
+                    className="group/link flex h-11 w-full items-center gap-2 rounded-full bg-foreground py-1.5 pl-1.5 pr-4 text-sm font-semibold text-background transition-shadow duration-300 hover:shadow-float sm:w-auto"
+                >
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand text-black transition-transform duration-300 group-hover/link:-rotate-12 group-hover/link:scale-110">
                         <CreditCard className="h-4 w-4" />
                     </span>
-                    <span className="flood-btn-label">{subscription?.plan === 'free' ? 'Upgrade Plan' : 'Manage Subscription'}</span>
+                    <span className="flex-1 whitespace-nowrap pl-1 sm:flex-none">{subscription?.plan === 'free' ? 'Upgrade plan' : 'Manage subscription'}</span>
+                    <ArrowUpRight className="h-4 w-4 -translate-x-1 text-brand opacity-0 transition-all duration-300 group-hover/link:translate-x-0 group-hover/link:opacity-100" />
                 </Link>
             </div>
         </section>
@@ -176,6 +195,7 @@ export default function SettingsPage() {
     const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const { mutate: changePassword, isPending: isChangingPassword } = useChangePassword();
+    const passwordSaved = useDoneFlash();
 
     const sanitizeInput = (val: string) => {
         let cleaned = val.replace(/^\s+/, '');
@@ -200,12 +220,13 @@ export default function SettingsPage() {
         setPasswordError(null);
         changePassword(
             { currentPassword: passwords.current, newPassword: passwords.next },
-            { onSuccess: () => setPasswords({ current: '', next: '', confirm: '' }) },
+            { onSuccess: () => { setPasswords({ current: '', next: '', confirm: '' }); passwordSaved.flash(); } },
         );
     };
 
     const { data: meData } = useMe();
     const { mutate: updateAccount, isPending: isUpdating } = useUpdateAccount();
+    const profileSaved = useDoneFlash();
     const activeUser = meData || userFromStore;
 
     useEffect(() => {
@@ -224,22 +245,32 @@ export default function SettingsPage() {
             ...prev,
             name: prev.name || name,
             email: prev.email || email,
-            phoneNumber: prev.phoneNumber || activeUser?.phoneNumber || '',
+            phoneNumber: prev.phoneNumber || toTenDigits(activeUser?.phoneNumber),
         }));
     }, [activeUser, token]);
+
+    // The phone as 10 digits whatever was stored ("+91 98765 43210" included).
+    const phoneDigits = toTenDigits(userDetails.phoneNumber);
+    const profileDirty = !!activeUser && (
+        userDetails.name.trim() !== (activeUser.name ?? '').trim() ||
+        phoneDigits !== toTenDigits(activeUser.phoneNumber)
+    );
 
     const handleSaveProfile = () => {
         if (!userDetails.name.trim()) { toast?.error?.('Name cannot be empty'); return; }
         if (userDetails.name === '""' || userDetails.name === "''") { toast?.error?.('Invalid name'); return; }
-        if (userDetails.phoneNumber && userDetails.phoneNumber.length !== 10) {
+        if (phoneDigits && phoneDigits.length !== 10) {
             toast?.error?.('Phone number must be exactly 10 digits');
             return;
         }
-        updateAccount({
-            name: userDetails.name,
-            email: userDetails.email,
-            phoneNumber: userDetails.phoneNumber === '' ? null : userDetails.phoneNumber,
-        });
+        updateAccount(
+            {
+                name: userDetails.name,
+                email: userDetails.email,
+                phoneNumber: phoneDigits === '' ? null : phoneDigits,
+            },
+            { onSuccess: () => profileSaved.flash() },
+        );
     };
 
     // Initials for the profile avatar (first letters of the first two words of the name).
@@ -256,22 +287,12 @@ export default function SettingsPage() {
 
             {/* Tabs */}
             <div className="mb-6 overflow-x-auto scrollbar-hide">
-                <div className="inline-flex gap-1 rounded-full bg-secondary p-1">
-                    {TABS.map((t) => (
-                        <button
-                            key={t.key}
-                            type="button"
-                            onClick={() => setTab(t.key)}
-                            className={cn(
-                                'flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition-all duration-200',
-                                tab === t.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                            )}
-                        >
-                            <t.icon className={cn('h-4 w-4', tab === t.key && 'text-foreground')} />
-                            {t.label}
-                        </button>
-                    ))}
-                </div>
+                <SegmentedTabs
+                    ariaLabel="Settings sections"
+                    value={tab}
+                    onChange={setTab}
+                    items={TABS.map((t) => ({ value: t.key, label: t.label, icon: t.icon }))}
+                />
             </div>
 
             {tab === 'account' && (
@@ -291,59 +312,89 @@ export default function SettingsPage() {
                         </div>
                     </section>
 
-                    {/* Personal details form */}
+                    {/* Personal details — field tiles (label inside the tile, value large below it, icon on
+                        the right) and a footer that says whether there's anything to save. */}
                     <section className={cn(SECTION_CARD, '[animation-delay:80ms]')}>
-                        <SectionHeader icon={User} title="Personal details" description="Update your name and contact number." />
-                        <div className="grid grid-cols-1 gap-5 px-6 py-6 md:grid-cols-2">
-                            <div>
-                                <label className={FIELD_LABEL}>Full Name</label>
-                                <input
-                                    type="text"
-                                    value={userDetails.name}
-                                    onChange={(e) => setUserDetails({ ...userDetails, name: sanitizeInput(e.target.value) })}
-                                    className={FIELD_INPUT}
-                                />
-                            </div>
-                            <div>
-                                <label className={FIELD_LABEL}>Phone</label>
-                                <div className="relative">
-                                    <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    <input
-                                        type="tel"
-                                        value={userDetails.phoneNumber}
-                                        maxLength={10}
-                                        placeholder="10-digit mobile number"
-                                        onChange={(e) => {
-                                            const numericValue = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
-                                            setUserDetails({ ...userDetails, phoneNumber: numericValue });
-                                        }}
-                                        className={cn(FIELD_INPUT, 'pl-11 tabular-nums')}
-                                    />
-                                </div>
-                                <p className={FIELD_HINT}>Enter 10-digit mobile number without country code.</p>
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className={FIELD_LABEL}>Email Address</label>
-                                <div className="relative">
-                                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    <input
-                                        type="email"
-                                        value={userDetails.email}
-                                        disabled
-                                        className="h-11 w-full cursor-not-allowed rounded-xl border border-dashed border-foreground/10 bg-secondary/30 pl-11 pr-11 text-sm text-muted-foreground"
-                                    />
-                                    <Lock className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
-                                </div>
-                                <p className={FIELD_HINT}>Email address cannot be changed.</p>
+                        <div className="flex items-center gap-3 px-5 pb-1 pt-5">
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground">
+                                <User className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0">
+                                <h3 className="font-display text-base font-bold tracking-tight">Personal details</h3>
+                                <p className="text-xs text-muted-foreground">How you appear to creators and your team.</p>
                             </div>
                         </div>
-                        <div className="flex justify-end border-t border-foreground/[0.06] bg-secondary/30 px-6 py-4">
-                            <button type="button" onClick={handleSaveProfile} disabled={isUpdating} className={PRIMARY_BUTTON}>
-                                <span className="flood-btn-icon grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
-                                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+
+                        <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2">
+                            <label htmlFor="settings-name" className={FIELD_TILE}>
+                                <span className="min-w-0 flex-1">
+                                    <span className={TILE_LABEL}>Full name</span>
+                                    <input
+                                        id="settings-name"
+                                        type="text"
+                                        autoComplete="name"
+                                        value={userDetails.name}
+                                        placeholder="Your name"
+                                        onChange={(e) => setUserDetails({ ...userDetails, name: sanitizeInput(e.target.value) })}
+                                        className={TILE_INPUT}
+                                    />
                                 </span>
-                                <span className="flood-btn-label">{isUpdating ? 'Saving...' : 'Save Changes'}</span>
-                            </button>
+                                <User className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-colors group-focus-within/tile:text-foreground" />
+                            </label>
+
+                            <label htmlFor="settings-phone" className={FIELD_TILE}>
+                                <span className="min-w-0 flex-1">
+                                    <span className={TILE_LABEL}>Mobile number</span>
+                                    <span className="mt-0.5 flex items-center gap-2">
+                                        <span className="shrink-0 text-[15px] font-medium text-muted-foreground">+91</span>
+                                        <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
+                                        <input
+                                            id="settings-phone"
+                                            type="tel"
+                                            inputMode="numeric"
+                                            autoComplete="tel-national"
+                                            value={formatTenDigits(phoneDigits)}
+                                            placeholder="98765 43210"
+                                            onChange={(e) => setUserDetails({ ...userDetails, phoneNumber: toTenDigits(e.target.value) })}
+                                            className={cn(TILE_INPUT, 'mt-0 min-w-0 tracking-wide tabular-nums')}
+                                        />
+                                    </span>
+                                </span>
+                                {phoneDigits.length === 10 ? (
+                                    <span className="grid h-5 w-5 shrink-0 animate-pop place-items-center rounded-full bg-emerald-500 text-white" title="Valid number">
+                                        <Check className="h-3 w-3" strokeWidth={3} />
+                                    </span>
+                                ) : phoneDigits.length > 0 ? (
+                                    <span className="shrink-0 rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">{phoneDigits.length}/10</span>
+                                ) : (
+                                    <Phone className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                                )}
+                            </label>
+
+                            <div className={cn(FIELD_TILE, 'cursor-default border-dashed bg-secondary/30 hover:border-border md:col-span-2')}>
+                                <span className="min-w-0 flex-1">
+                                    <span className={TILE_LABEL}>Email address</span>
+                                    <span className="mt-0.5 block truncate text-[15px] font-medium text-foreground/70">{userDetails.email}</span>
+                                </span>
+                                <span className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-semibold text-muted-foreground" title="Email address cannot be changed">
+                                    <Lock className="h-3 w-3" /> Locked
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col-reverse items-stretch gap-3 border-t border-foreground/[0.06] px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <span className={cn('flex items-center gap-2 text-xs font-medium', profileDirty ? 'text-foreground' : 'text-muted-foreground')}>
+                                <span className={cn('h-2 w-2 shrink-0 rounded-full', profileDirty ? 'animate-pulse bg-brand ring-4 ring-brand/25' : 'bg-emerald-500')} />
+                                {profileDirty ? 'You have unsaved changes' : 'Everything is saved'}
+                            </span>
+                            <ProgressPillButton
+                                phase={isUpdating ? 'busy' : profileSaved.done ? 'done' : 'idle'}
+                                icon={Save}
+                                exit="drop"
+                                labels={{ idle: 'Save changes', busy: 'Saving…', done: 'Saved!' }}
+                                onClick={handleSaveProfile}
+                                className="w-full sm:w-auto"
+                            />
                         </div>
                     </section>
                 </div>
@@ -352,7 +403,7 @@ export default function SettingsPage() {
             {tab === 'security' && (
                 <section className={SECTION_CARD}>
                     <SectionHeader icon={ShieldCheck} title="Change password" description="Use a strong password you don't use anywhere else." />
-                    <div className="grid grid-cols-1 gap-5 px-6 py-6 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-x-5 gap-y-4 px-5 py-4 md:grid-cols-2">
                         <div className="md:col-span-2 md:max-w-[calc(50%-10px)]">
                             <label className={FIELD_LABEL}>Current Password</label>
                             <div className="relative">
@@ -396,13 +447,15 @@ export default function SettingsPage() {
                             </p>
                         )}
                     </div>
-                    <div className="flex justify-end border-t border-foreground/[0.06] bg-secondary/30 px-6 py-4">
-                        <button type="button" onClick={handleChangePassword} disabled={isChangingPassword} className={PRIMARY_BUTTON}>
-                            <span className="flood-btn-icon grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
-                                {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-                            </span>
-                            <span className="flood-btn-label">{isChangingPassword ? 'Updating...' : 'Update Password'}</span>
-                        </button>
+                    <div className="flex justify-end border-t border-foreground/[0.06] px-5 py-3">
+                        <ProgressPillButton
+                            phase={isChangingPassword ? 'busy' : passwordSaved.done ? 'done' : 'idle'}
+                            icon={Lock}
+                            exit="drop"
+                            labels={{ idle: 'Update password', busy: 'Updating…', done: 'Password updated!' }}
+                            onClick={handleChangePassword}
+                            className="w-full sm:w-auto"
+                        />
                     </div>
                 </section>
             )}

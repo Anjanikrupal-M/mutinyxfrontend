@@ -659,7 +659,6 @@ export default function DiscoverPage({ savedOnly = false }: DiscoverPageProps) {
                         <div className="relative flex flex-1 flex-col overflow-hidden rounded-[23px] bg-card bg-gradient-to-br from-brand/[0.09] via-card to-card p-5 text-foreground sm:p-6">
                             <span aria-hidden className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 animate-pulse-soft rounded-full bg-brand/15 blur-3xl" />
                             <span aria-hidden className="pointer-events-none absolute -bottom-28 -left-20 h-56 w-56 rounded-full bg-brand/[0.07] blur-3xl" />
-                            <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
                             {/* While the AI is working, a thin light runs across the top edge. */}
                             {aiSearch.isPending && (
                                 <span aria-hidden className="absolute inset-x-0 top-0 h-px overflow-hidden">
@@ -1113,7 +1112,6 @@ export default function DiscoverPage({ savedOnly = false }: DiscoverPageProps) {
             {!isLoading && !error && (
                 filtered.length === 0 ? (
                     <div className="relative mt-4 flex min-h-[44vh] animate-fade-up flex-col items-center justify-center overflow-hidden rounded-3xl border border-border bg-card px-4 text-center shadow-card">
-                        <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:18px_18px]" />
                         <span className="relative grid h-14 w-14 animate-pop place-items-center rounded-2xl bg-foreground text-brand shadow-float">
                             <Search className="h-6 w-6" />
                         </span>

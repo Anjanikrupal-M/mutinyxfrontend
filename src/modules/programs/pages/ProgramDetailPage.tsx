@@ -24,6 +24,7 @@ import { getCampaignDisplayStatus } from '@/modules/campaigns/utils/campaignStat
 import type { ProgramEnrollment } from '@/shared/types/campaign';
 import { useProfileGate } from '@/shared/hooks/useProfileGate';
 import { cn } from '@/lib/utils';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { useInfluencer } from '@/modules/discover/hooks/useInfluencers';
 import { PLATFORM_ICONS } from '@/shared/components/SocialIcons';
 
@@ -444,33 +445,15 @@ function EnrollmentsPanel({
 
             {/* Tabs */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/60 border border-border/50 w-fit">
-                    {(['enrolled', 'invited'] as const).map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setFilterTab(tab)}
-                            className={cn(
-                                'px-4 py-1.5 rounded-lg text-xs font-semibold transition-all capitalize flex items-center gap-1.5',
-                                filterTab === tab
-                                    ? 'bg-card shadow-sm text-foreground border border-border/60'
-                                    : 'text-muted-foreground hover:text-foreground'
-                            )}
-                        >
-                            {tab === 'enrolled' ? <Users className="w-3 h-3" /> : <Send className="w-3 h-3" />}
-                            {tab}
-                            {counts[tab] > 0 && (
-                                <span className={cn(
-                                    'px-1.5 py-0.5 rounded-full text-[10px] font-bold min-w-[18px] text-center',
-                                    tab === 'invited'
-                                        ? 'bg-[#fedc03] text-[#1a1100]'
-                                        : 'bg-secondary text-muted-foreground'
-                                )}>
-                                    {counts[tab]}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
+                <SegmentedTabs<'enrolled' | 'invited'>
+                    ariaLabel="Enrolled or invited creators"
+                    value={filterTab}
+                    onChange={setFilterTab}
+                    items={[
+                        { value: 'enrolled', label: 'Enrolled', icon: Users, count: counts.enrolled > 0 ? counts.enrolled : undefined },
+                        { value: 'invited', label: 'Invited', icon: Send, count: counts.invited > 0 ? counts.invited : undefined },
+                    ]}
+                />
 
                 {filterTab === 'enrolled' && enrolledList.length > 1 && selectedIds.size === 0 && (
                     <button
@@ -1033,52 +1016,15 @@ export default function ProgramDetailPage() {
             {/* Tabs: Campaigns | Enrollments */}
             <div className="space-y-4">
                 {/* Tab nav */}
-                <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/60 border border-border/50 w-fit">
-                    <button
-                        onClick={() => setActiveTab('campaigns')}
-                        className={cn(
-                            'flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all',
-                            activeTab === 'campaigns'
-                                ? 'bg-card shadow-sm text-foreground border border-border/60'
-                                : 'text-muted-foreground hover:text-foreground',
-                        )}
-                    >
-                        <Megaphone className="w-3.5 h-3.5" />
-                        Campaigns
-                        {campaignCount > 0 && (
-                            <span className={cn(
-                                'px-1.5 py-0.5 rounded-full text-[10px] font-bold min-w-[18px] text-center',
-                                activeTab === 'campaigns'
-                                    ? 'bg-[#fedc03] text-[#1a1100]'
-                                    : 'bg-secondary text-muted-foreground',
-                            )}>
-                                {campaignCount}
-                            </span>
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('enrollments')}
-                        className={cn(
-                            'flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all',
-                            activeTab === 'enrollments'
-                                ? 'bg-card shadow-sm text-foreground border border-border/60'
-                                : 'text-muted-foreground hover:text-foreground',
-                        )}
-                    >
-                        <Users className="w-3.5 h-3.5" />
-                        Enrollments
-                        {enrollmentCount > 0 && (
-                            <span className={cn(
-                                'px-1.5 py-0.5 rounded-full text-[10px] font-bold min-w-[18px] text-center',
-                                activeTab === 'enrollments'
-                                    ? 'bg-[#fedc03] text-[#1a1100]'
-                                    : 'bg-secondary text-muted-foreground',
-                            )}>
-                                {enrollmentCount}
-                            </span>
-                        )}
-                    </button>
-                </div>
+                <SegmentedTabs<'campaigns' | 'enrollments'>
+                    ariaLabel="Program sections"
+                    value={activeTab}
+                    onChange={setActiveTab}
+                    items={[
+                        { value: 'campaigns', label: 'Campaigns', icon: Megaphone, count: campaignCount > 0 ? campaignCount : undefined },
+                        { value: 'enrollments', label: 'Enrollments', icon: Users, count: enrollmentCount > 0 ? enrollmentCount : undefined },
+                    ]}
+                />
 
                 {/* Tab content */}
                 {activeTab === 'campaigns' ? (

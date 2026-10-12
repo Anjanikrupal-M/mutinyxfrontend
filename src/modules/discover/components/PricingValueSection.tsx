@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Activity, Eye, IndianRupee, Info, MousePointerClick, Tag, Target, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import type { InstagramInsightsPayload } from '../influencer-display';
 
 type ContentItem = NonNullable<InstagramInsightsPayload['content']>[number];
@@ -87,8 +87,8 @@ function ValueTile({ icon: Icon, label, value, hint, emphasis }: {
     emphasis?: boolean;
 }) {
     return (
-        <div className={cn('min-w-0 rounded-2xl p-3.5', emphasis ? 'bg-foreground text-background' : 'bg-secondary/40')}>
-            <p className={cn('flex items-center gap-1.5 text-xs font-medium', emphasis ? 'text-background/70' : 'text-muted-foreground')}>
+        <div className={cn('min-w-0 rounded-2xl p-3.5', emphasis ? 'bg-brand/15 ring-1 ring-brand/40' : 'bg-secondary/40')}>
+            <p className={cn('flex items-center gap-1.5 text-xs font-medium', emphasis ? 'text-foreground/70' : 'text-muted-foreground')}>
                 <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{label}</span>
             </p>
@@ -98,7 +98,7 @@ function ValueTile({ icon: Icon, label, value, hint, emphasis }: {
             )}>
                 {value ?? '—'}
             </p>
-            <p className={cn('mt-1 text-[11px] leading-snug line-clamp-2', emphasis ? 'text-background/70' : 'text-muted-foreground')}>{hint}</p>
+            <p className={cn('mt-1 text-[11px] leading-snug line-clamp-2', emphasis ? 'text-foreground/70' : 'text-muted-foreground')}>{hint}</p>
         </div>
     );
 }
@@ -147,7 +147,7 @@ export function PricingValueSection({ rateCard, insights, className }: {
     return (
         <section className={cn('rounded-[28px] border border-border bg-card p-4 shadow-card sm:p-5 space-y-4', className)}>
             <div className="flex items-center gap-3 min-w-0">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-foreground text-brand">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40">
                     <IndianRupee className="w-5 h-5" />
                 </span>
                 <div className="min-w-0">
@@ -160,40 +160,27 @@ export function PricingValueSection({ rateCard, insights, className }: {
                 </div>
             </div>
 
-            {/* Formats — one tray on its own row that wraps, so no format is ever cut off. The
-                black pill slides to the selected format; its price turns yellow. */}
-            <div className="flex flex-wrap gap-1 rounded-2xl bg-secondary/60 p-1" role="tablist" aria-label="Deliverable formats">
-                {formats.map((format) => {
-                    const selected = format.key === active.key;
-                    return (
-                        <button
-                            key={format.key}
-                            type="button"
-                            role="tab"
-                            aria-selected={selected}
-                            onClick={() => setSelectedKey(format.key)}
-                            className={cn(
-                                'relative flex h-9 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 text-xs font-semibold transition-colors duration-200 active:scale-95',
-                                selected ? 'text-background' : 'text-foreground/70 hover:bg-card hover:text-foreground',
-                            )}
-                        >
-                            {selected && (
-                                <motion.span
-                                    layoutId="pricing-format-pill"
-                                    transition={{ type: 'spring', stiffness: 450, damping: 34 }}
-                                    className="absolute inset-0 rounded-xl bg-foreground shadow-sm"
-                                />
-                            )}
-                            <span className="relative">{format.label}</span>
+            {/* Formats — the app-wide switch; wraps onto a second row so no format is cut off.
+                The selected format's price turns yellow. */}
+            <SegmentedTabs
+                ariaLabel="Deliverable formats"
+                value={active.key}
+                onChange={setSelectedKey}
+                items={formats.map((format) => ({
+                    value: format.key,
+                    label: (
+                        <>
+                            {format.label}
                             {format.rate != null && (
-                                <span className={cn('relative tabular-nums font-medium', selected ? 'text-brand' : 'text-muted-foreground')}>
+                                <span className={cn('tabular-nums font-medium', format.key === active.key ? 'text-brand' : 'text-muted-foreground')}>
                                     {rupees(format.rate)}
                                 </span>
                             )}
-                        </button>
-                    );
-                })}
-            </div>
+                        </>
+                    ),
+                }))}
+                className="flex-wrap"
+            />
 
             {/* Three layouts, each filling full rows — no tile is ever rendered just to say
                 "missing": priced + data (8 tiles), data but no price (notice + 4), price but

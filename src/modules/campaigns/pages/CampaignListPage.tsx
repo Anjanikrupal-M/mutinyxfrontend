@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, LockKeyhole, Globe, LayoutGrid, Sparkles, ChevronLeft, ChevronRight, Search, X, Plus, Megaphone } from 'lucide-react';
 import { InfoTooltip } from '@/shared/components/InfoTooltip';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { useCampaigns } from '@/modules/campaigns/hooks/useCampaigns';
 import { CampaignCard } from '@/modules/campaigns/components/CampaignCard';
 import { cn } from '@/lib/utils';
@@ -288,84 +289,29 @@ function CampaignListPageContent() {
                     </label>
                 </div>
 
-                {/* Visibility switch — glass pill to match the search. The selected option is a black
-                    pill that springs across with a little bounce (stretching to each label's width),
-                    its icon turns yellow and pops. */}
-                <div
-                    className="flex h-12 shrink-0 animate-fade-up items-center gap-0.5 rounded-full border border-white/80 bg-gradient-to-b from-white/90 to-white/55 p-1 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.95),inset_0_-1px_0_rgb(0_0_0_/_0.04),0_1px_2px_rgb(0_0_0_/_0.04),0_10px_28px_-14px_rgb(0_0_0_/_0.22)] ring-1 ring-black/[0.06] backdrop-blur-xl [animation-delay:290ms]"
-                    role="group"
-                    aria-label="Visibility"
-                >
-                    {VISIBILITY_FILTERS.map((vf) => {
-                        const active = activeVisibility === vf.key;
-                        const Icon = vf.icon;
-                        return (
-                            <button
-                                key={vf.key}
-                                type="button"
-                                aria-pressed={active}
-                                onClick={() => updateFilter('visibility', vf.key)}
-                                className={cn(
-                                    'relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-[13px] transition-[color,transform] duration-200 active:scale-95',
-                                    active ? 'font-semibold text-background' : 'font-medium text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                {/* Hover wash for the idle options. */}
-                                {!active && <span aria-hidden className="absolute inset-0 rounded-full bg-black/[0.04] opacity-0 transition-opacity duration-200 hover:opacity-100" />}
-                                {active && (
-                                    <motion.span
-                                        layoutId="campaign-visibility-pill"
-                                        transition={{ type: 'spring', stiffness: 420, damping: 26, mass: 0.8 }}
-                                        className="absolute inset-0 rounded-full bg-foreground shadow-[0_8px_18px_-8px_rgb(250_203_3_/_0.9),inset_0_1px_0_rgb(255_255_255_/_0.15)]"
-                                    />
-                                )}
-                                {/* Keyed on state so the pop replays each time the option is picked. */}
-                                <Icon
-                                    key={active ? 'on' : 'off'}
-                                    className={cn('relative h-3.5 w-3.5 transition-colors duration-200', active && 'animate-pop text-brand')}
-                                />
-                                <span className="relative">{vf.label}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                {/* Visibility switch — the app-wide switch style, sized to sit beside the search. */}
+                <SegmentedTabs
+                    ariaLabel="Visibility"
+                    value={activeVisibility}
+                    onChange={(v) => updateFilter('visibility', v)}
+                    items={VISIBILITY_FILTERS.map((vf) => ({ value: vf.key, label: vf.label, icon: vf.icon }))}
+                    className="shrink-0 animate-fade-up [animation-delay:290ms]"
+                />
             </div>
 
-            {/* Status rail — scrolls on narrow screens, edges fade instead of clipping hard. */}
-            <section className="mt-3 animate-fade-up overflow-hidden rounded-2xl border border-border bg-card px-2 shadow-card [animation-delay:340ms]">
-                <div>
-                    <div className="flex items-center overflow-x-auto scrollbar-hide [mask-image:linear-gradient(to_right,transparent,black_12px,black_calc(100%-24px),transparent)]">
-                        {STATUS_TABS.filter(tab => !tab.isAgent || isBrandOwner).map((tab) => {
-                            const active = activeTab === tab.key;
-                            return (
-                                <button
-                                    key={tab.key}
-                                    type="button"
-                                    aria-pressed={active}
-                                    onClick={() => updateFilter('status', tab.key)}
-                                    className={cn(
-                                        'group/tab relative flex h-12 shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 text-[13px] transition-colors duration-200',
-                                        active ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground hover:text-foreground',
-                                    )}
-                                >
-                                    {/* Hover wash, then the gliding yellow underline for the active tab. */}
-                                    <span aria-hidden className="absolute inset-x-1 inset-y-2 rounded-xl bg-secondary opacity-0 transition-opacity duration-200 group-hover/tab:opacity-100" />
-                                    {active && (
-                                        <motion.span
-                                            layoutId="campaign-status-rail"
-                                            transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                                            className="absolute inset-x-2.5 bottom-0 h-[3px] rounded-t-full bg-brand"
-                                        />
-                                    )}
-                                    {tab.isAI && <Sparkles className={cn('relative h-3.5 w-3.5', active ? 'text-foreground' : 'text-muted-foreground')} />}
-                                    {tab.isAgent && <Users className="relative h-3.5 w-3.5" />}
-                                    <span className="relative">{tab.label}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </section>
+            {/* Status tabs — the app-wide switch style; scrolls sideways on narrow screens. */}
+            <div className="mt-3 animate-fade-up overflow-x-auto scrollbar-hide [animation-delay:340ms]">
+                <SegmentedTabs
+                    ariaLabel="Campaign status"
+                    value={activeTab}
+                    onChange={(v) => updateFilter('status', v)}
+                    items={STATUS_TABS.filter((tab) => !tab.isAgent || isBrandOwner).map((tab) => ({
+                        value: tab.key,
+                        label: tab.label,
+                        icon: tab.isAI ? Sparkles : tab.isAgent ? Users : undefined,
+                    }))}
+                />
+            </div>
 
             {/* Results line with removable filter chips */}
             {!isLoading && !error && (

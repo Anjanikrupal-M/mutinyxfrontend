@@ -560,7 +560,8 @@ function DashboardPageContent() {
                     subtitle="Committed, all campaigns"
                     value={campaignsLoading ? null : (
                         <>
-                            <span className="mr-0.5 text-[22px]">₹</span>
+                            {/* Body font for the symbol: the display font has no ₹ glyph, so a fallback font sat out of line. */}
+                            <span className="mr-0.5 font-sans text-[0.82em] font-semibold">₹</span>
                             {budgetDisplay}
                         </>
                     )}

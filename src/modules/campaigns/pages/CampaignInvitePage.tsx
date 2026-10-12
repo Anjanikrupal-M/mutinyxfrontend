@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { BADGE_METADATA } from '@/shared/constants/badges';
 import { cn } from '@/lib/utils';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { useCampaign } from '@/modules/campaigns/hooks/useCampaigns';
 import { useInviteInfluencers } from '@/modules/campaigns/hooks/useCampaignInvite';
 import { useApplications } from '@/modules/campaigns/hooks/useApplications';
@@ -395,28 +396,16 @@ export default function CampaignInvitePage() {
                                     className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-[#fedc03]/20 transition-all text-sm"
                                 />
                             </div>
-                            <div className="flex bg-card border border-border p-1 rounded-xl shrink-0">
-                                <button
-                                    onClick={() => setActiveTab('suggested')}
-                                    className={cn(
-                                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                                        activeTab === 'suggested' ? 'bg-[#fedc03] text-black shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                                    )}
-                                >
-                                    <Sparkles className="w-4 h-4" />
-                                    Suggested
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('all')}
-                                    className={cn(
-                                        'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                                        activeTab === 'all' ? 'bg-[#fedc03] text-black shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                                    )}
-                                >
-                                    <Globe className="w-4 h-4" />
-                                    All Creators
-                                </button>
-                            </div>
+                            <SegmentedTabs<'suggested' | 'all'>
+                                ariaLabel="Which creators to show"
+                                value={activeTab}
+                                onChange={setActiveTab}
+                                items={[
+                                    { value: 'suggested', label: 'Suggested', icon: Sparkles },
+                                    { value: 'all', label: 'All creators', icon: Globe },
+                                ]}
+                                className="shrink-0"
+                            />
                         </div>
 
                         {/* Filters */}

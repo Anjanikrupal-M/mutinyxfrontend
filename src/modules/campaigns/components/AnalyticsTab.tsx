@@ -3,10 +3,10 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { Activity, AlertTriangle, BarChart3, Bookmark, Check, Clock, ExternalLink, Eye, Grid3x3, Heart, Layers, Loader2, MessageCircle, PieChart, RefreshCw, Reply, Share2, Sparkles, Timer, Trophy, TrendingUp, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import type { Campaign, CampaignInfluencer, ProofReelAnalytics } from '@/shared/types/campaign';
 import { EmptyData, Pill } from '@/shared/components/insights/InsightBlocks';
 import { RankedBars, SplitBar, type ChartSegment } from '@/shared/components/insights/InsightCharts';
-import { AnimatedDonutChart } from '@/shared/components/AnimatedDonutChart';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toneClasses } from '@/shared/components/insights/insightTones';
 import { MediaThumb } from '@/shared/components/MediaThumb';
@@ -97,8 +97,8 @@ function durationFromMs(value: number | null | undefined): string {
 }
 
 function compactCount(value: number): string {
-    if (value >= 1e7) return `${Number((value / 1e7).toFixed(2))} Cr`;
-    if (value >= 1e5) return `${Number((value / 1e5).toFixed(2))} L`;
+    if (value >= 1e7) return `${Number((value / 1e7).toFixed(2))}Cr`;
+    if (value >= 1e5) return `${Number((value / 1e5).toFixed(2))}L`;
     if (value >= 1e3) return `${Number((value / 1e3).toFixed(1))}K`;
     return String(Math.round(value));
 }
@@ -123,41 +123,13 @@ function metricText(value: number | null | undefined, state: MetricAvailability 
     return { text: compactCount(value), exact: exactCount(value), muted: false };
 }
 
-/**
- * A stat card's trend: one slim rounded stem per reporting day, rising to today's total, with the
- * day count and "Today" written underneath. Earlier days are soft yellow, today is solid brand
- * yellow with a small dark cap. Plain flex boxes, so nothing can stretch out of shape.
- */
-function TrendBars({ values }: { values: number[] }) {
-    if (values.length < 2) return null;
-    const max = Math.max(...values) || 1;
-    return <div aria-hidden>
-        <div className="flex h-10 items-end justify-between gap-1 px-0.5">
-            {values.map((value, i) => {
-                const isLast = i === values.length - 1;
-                return <span key={i} className="relative flex h-full w-2 items-end justify-center">
-                    <span
-                        className={cn('w-full rounded-full transition-all duration-300', isLast ? 'bg-brand' : 'bg-brand/35 group-hover:bg-brand/50')}
-                        style={{ height: `${Math.max(14, (value / max) * 100)}%` }}
-                    />
-                    {isLast && <span className="absolute h-2 w-2 rounded-full bg-foreground ring-2 ring-card" style={{ bottom: `calc(${Math.max(14, (value / max) * 100)}% - 4px)` }} />}
-                </span>;
-            })}
-        </div>
-        <div className="mt-1.5 flex justify-between text-[10px] font-medium text-muted-foreground">
-            <span>{values.length} days</span>
-            <span className="text-foreground">Today</span>
-        </div>
-    </div>;
-}
-
 /** Growth over the reporting window, first day to today, as a percentage. */
 function growthOf(values: number[]): number | null {
     if (values.length < 2 || values[0] <= 0) return null;
     return ((values[values.length - 1] - values[0]) / values[0]) * 100;
 }
 
-/** One stat card: icon tile and label, the figure with its growth, a hint, and its daily bars. */
+/** One stat card: icon tile and label, the figure with its growth, and a hint. */
 function KpiCell({ label, value, state, kind = 'count', hint, icon: Icon, trend }: {
     label: string;
     value: number | null | undefined;
@@ -173,7 +145,7 @@ function KpiCell({ label, value, state, kind = 'count', hint, icon: Icon, trend 
         <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-brand/20 blur-2xl" />
         <div className="relative flex items-center justify-between gap-2">
             <p className="flex min-w-0 items-center gap-2 text-xs font-semibold">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-foreground text-brand"><Icon className="h-3.5 w-3.5" /></span>
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/15 text-foreground ring-1 ring-brand/40 transition-all duration-300 group-hover:-rotate-12 group-hover:bg-brand"><Icon className="h-3.5 w-3.5" /></span>
                 <span className="truncate">{label}</span>
             </p>
             {growth != null && growth > 0 && (
@@ -190,14 +162,6 @@ function KpiCell({ label, value, state, kind = 'count', hint, icon: Icon, trend 
             {muted ? '—' : text}
         </p>
         <p className="relative mt-1.5 truncate text-[11px] text-muted-foreground">{muted ? text : hint}</p>
-        <div className="relative mt-auto pt-3">
-            {!muted && trend && trend.length > 1
-                ? <TrendBars values={trend} />
-                // No daily history for this one: a quiet placeholder keeps the cards the same height.
-                : <div className="flex h-[58px] items-center justify-center rounded-xl border border-dashed border-foreground/15 text-[10px] font-medium text-muted-foreground" aria-hidden>
-                    {muted ? 'Waiting for data' : 'No daily history'}
-                </div>}
-        </div>
     </div>;
 }
 
@@ -230,16 +194,13 @@ function Segmented<T extends string>({ options, value, onChange, label }: {
     onChange: (value: T) => void;
     label: string;
 }) {
-    return <div className="inline-flex shrink-0 rounded-full bg-secondary p-1" role="tablist" aria-label={label}>
-        {options.map((option) => <button
-            key={option.key}
-            type="button"
-            role="tab"
-            aria-selected={value === option.key}
-            onClick={() => onChange(option.key)}
-            className={cn('whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-200', value === option.key ? 'bg-foreground text-background shadow-sm' : 'text-muted-foreground hover:text-foreground')}
-        >{option.label}</button>)}
-    </div>;
+    return <SegmentedTabs
+        ariaLabel={label}
+        value={value}
+        onChange={onChange}
+        items={options.map((option) => ({ value: option.key, label: option.label }))}
+        className="shrink-0"
+    />;
 }
 
 const METRIC_TILES: Array<{ label: string; field: keyof InstagramFormatMetricTotals; key: string; kind?: MetricKind; icon: typeof Eye; emphasis?: boolean }> = [
@@ -267,15 +228,46 @@ const TREND_SERIES = [
 const shortDate = (value: string) => new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 const longDate = (value: string) => new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-function TrendChart({ points, platform, heightClass = 'h-44' }: { points: CampaignMetricHistoryPoint[]; platform: string; heightClass?: string }) {
+/**
+ * Daily trend of views / reach / interactions. The legend chips switch each line on or off (the
+ * axis rescales, so a small series like interactions becomes readable on its own); `summary`
+ * adds a strip under the chart with each line's latest figure and its growth over the window.
+ */
+function TrendChart({ points, platform, heightClass = 'h-44', summary = false }: { points: CampaignMetricHistoryPoint[]; platform: string; heightClass?: string; summary?: boolean }) {
     const series = TREND_SERIES.filter((entry) => entry.key !== 'reach' || platform === 'instagram');
+    const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+    const toggle = (key: string) => setHidden((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        // Never hide the last visible line.
+        else if (series.length - prev.size > 1) next.add(key);
+        return next;
+    });
+    const valueOf = (point: CampaignMetricHistoryPoint, key: string) => {
+        const raw = (point as unknown as Record<string, number | null | undefined>)[key];
+        return typeof raw === 'number' ? raw : null;
+    };
 
-    return <div>
+    return <div className="flex min-h-0 flex-1 flex-col">
         <ul className="mb-3 flex flex-wrap gap-1.5 text-[11px]">
-            {series.map((entry) => <li key={entry.key} className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 font-semibold text-foreground/80">
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} aria-hidden />
-                {entry.name}
-            </li>)}
+            {series.map((entry) => {
+                const off = hidden.has(entry.key);
+                return <li key={entry.key}>
+                    <button
+                        type="button"
+                        aria-pressed={!off}
+                        onClick={() => toggle(entry.key)}
+                        title={off ? `Show ${entry.name}` : `Hide ${entry.name}`}
+                        className={cn(
+                            'flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-semibold transition-all duration-200',
+                            off ? 'border-dashed border-border text-muted-foreground/60' : 'border-border text-foreground/80 hover:border-foreground/40',
+                        )}
+                    >
+                        <svg viewBox="0 0 8 8" className={cn('h-2 w-2 shrink-0 transition-opacity', off && 'opacity-30')} aria-hidden><circle cx="4" cy="4" r="4" fill={entry.color} /></svg>
+                        <span className={cn(off && 'line-through')}>{entry.name}</span>
+                    </button>
+                </li>;
+            })}
         </ul>
         <div className={cn(heightClass, 'w-full')}>
             <ResponsiveContainer width="100%" height="100%">
@@ -288,7 +280,7 @@ function TrendChart({ points, platform, heightClass = 'h-44' }: { points: Campai
                     </defs>
                     <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 5" />
                     <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} minTickGap={20} tickFormatter={shortDate} />
-                    <YAxis tickLine={false} axisLine={false} width={40} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(value: number) => compactCount(value)} />
+                    <YAxis tickLine={false} axisLine={false} width={48} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(value: number) => compactCount(value)} />
                     <Tooltip
                         cursor={{ stroke: 'hsl(var(--foreground))', strokeOpacity: 0.25, strokeDasharray: '3 3' }}
                         content={({ active, payload, label }) => {
@@ -305,6 +297,7 @@ function TrendChart({ points, platform, heightClass = 'h-44' }: { points: Campai
                     />
                     {series.map((entry) => <Area
                         key={entry.key}
+                        hide={hidden.has(entry.key)}
                         type="monotone"
                         dataKey={entry.key}
                         name={entry.name}
@@ -317,6 +310,29 @@ function TrendChart({ points, platform, heightClass = 'h-44' }: { points: Campai
                 </AreaChart>
             </ResponsiveContainer>
         </div>
+
+        {/* Latest figure and growth over the window, one cell per line */}
+        {summary && <dl className="mt-3 grid grid-cols-1 divide-y divide-border rounded-2xl border border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            {series.map((entry) => {
+                const values = points.map((point) => valueOf(point, entry.key)).filter((v): v is number => v != null);
+                const first = values[0];
+                const last = values[values.length - 1];
+                const growth = first != null && last != null && first > 0 ? ((last - first) / first) * 100 : null;
+                return <div key={entry.key} className={cn('flex items-center justify-between gap-3 px-3.5 py-2 transition-opacity', hidden.has(entry.key) && 'opacity-40')}>
+                    <div className="min-w-0">
+                        <dt className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <svg viewBox="0 0 8 8" className="h-2 w-2 shrink-0" aria-hidden><circle cx="4" cy="4" r="4" fill={entry.color} /></svg>
+                            {entry.name} · today
+                        </dt>
+                        <dd className="font-display text-base font-semibold tabular-nums">{last != null ? compactCount(last) : '—'}</dd>
+                    </div>
+                    {growth != null && growth > 0 && <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700" title="Growth since the first reporting day">
+                        <TrendingUp className="h-3 w-3" />
+                        {growth >= 100 ? `${(growth / 100 + 1).toFixed(1)}×` : `+${growth.toFixed(0)}%`}
+                    </span>}
+                </div>;
+            })}
+        </dl>}
     </div>;
 }
 
@@ -499,8 +515,9 @@ const ENGAGEMENT_COLORS: Record<string, string> = {
 };
 
 /**
- * How the audience engaged: an animated donut of the interaction mix (hover a segment or a legend
- * row to see its count and share in the centre), plus the quieter signals Meta returns.
+ * How the audience engaged: a half-ring gauge of the interaction mix (segments draw in one after
+ * another with small gaps; hover a segment or a row to focus it and read it under the arc), a row
+ * per interaction with its own share bar, and the quieter signals Meta returns as a slim strip.
  */
 function EngagementBreakdown({ mix, facts }: {
     mix: Array<{ name: string; value: number }>;
@@ -513,56 +530,96 @@ function EngagementBreakdown({ mix, facts }: {
     const total = segments.reduce((sum, segment) => sum + segment.value, 0);
     const active = segments.find((segment) => segment.label === hovered) ?? null;
 
-    return <div className="flex flex-1 flex-col gap-4">
-        {total > 0 ? <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
-            <AnimatedDonutChart
-                data={segments}
-                size={168}
-                strokeWidth={22}
-                animationDuration={1.2}
-                animationDelayPerSegment={0.08}
-                activeLabel={hovered}
-                onSegmentHover={(segment) => setHovered(segment?.label ?? null)}
-                className="shrink-0"
-                centerContent={
+    // Half ring: 180° from the left end to the right end, a 2° gap between segments.
+    const R = 88;
+    const CX = 110;
+    const CY = 104;
+    const GAP = segments.length > 1 ? 2 : 0;
+    const usable = 180 - GAP * (segments.length - 1);
+    const point = (deg: number) => {
+        const rad = (Math.PI * (180 + deg)) / 180;
+        return `${(CX + R * Math.cos(rad)).toFixed(2)} ${(CY + R * Math.sin(rad)).toFixed(2)}`;
+    };
+    let cursor = 0;
+    const arcs = segments.map((segment) => {
+        const sweep = Math.max(0.5, (segment.value / total) * usable);
+        const start = cursor;
+        cursor += sweep + GAP;
+        return { ...segment, d: `M ${point(start)} A ${R} ${R} 0 0 1 ${point(start + sweep)}` };
+    });
+
+    return <div className="flex flex-1 flex-col gap-3.5">
+        {total > 0 ? <>
+            {/* The gauge, with the total (or the hovered interaction) under the arc */}
+            <div className="relative mx-auto w-full max-w-[200px]">
+                <svg viewBox="0 0 220 112" className="w-full overflow-visible" role="img" aria-label="Interaction mix">
+                    <path d={`M ${point(0)} A ${R} ${R} 0 0 1 ${point(180)}`} fill="none" strokeWidth={16} className="stroke-foreground/[0.06]" />
+                    {arcs.map((arc, i) => <motion.path
+                        key={arc.label}
+                        d={arc.d}
+                        fill="none"
+                        stroke={arc.color}
+                        strokeWidth={hovered === arc.label ? 20 : 16}
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1, opacity: hovered && hovered !== arc.label ? 0.25 : 1 }}
+                        transition={{ pathLength: { duration: 0.7, delay: 0.15 + i * 0.18, ease: 'easeOut' }, opacity: { duration: 0.2 } }}
+                        onMouseEnter={() => setHovered(arc.label)}
+                        onMouseLeave={() => setHovered(null)}
+                        className="cursor-pointer transition-[stroke-width] duration-200"
+                    />)}
+                </svg>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={active?.label ?? 'total'}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ duration: 0.18, ease: 'circOut' }}
-                            className="flex flex-col items-center text-center"
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.18 }}
+                            className="flex flex-col items-center"
                         >
-                            <span className="max-w-[96px] truncate text-[11px] font-medium text-muted-foreground">{active?.label ?? 'Interactions'}</span>
-                            <span className="font-display text-2xl font-semibold leading-tight tabular-nums">{compactCount(active?.value ?? total)}</span>
-                            {active && <span className="text-xs font-semibold tabular-nums text-muted-foreground">{((active.value / total) * 100).toFixed(0)}%</span>}
+                            <span className="font-display text-2xl font-semibold leading-none tabular-nums">{compactCount(active?.value ?? total)}</span>
+                            <span className="mt-0.5 text-[10px] font-medium text-muted-foreground">
+                                {active ? `${active.label} · ${((active.value / total) * 100).toFixed(1)}%` : 'Total interactions'}
+                            </span>
                         </motion.div>
                     </AnimatePresence>
-                }
-            />
-            {/* Legend — also the labels for every segment, so no share relies on colour alone. */}
-            <ul className="w-full min-w-0 flex-1 space-y-1">
-                {segments.map((segment, index) => <motion.li
-                    key={segment.label}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 + index * 0.08, duration: 0.3 }}
-                    onMouseEnter={() => setHovered(segment.label)}
-                    onMouseLeave={() => setHovered(null)}
-                    className={cn('flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-xs transition-colors duration-200', hovered === segment.label ? 'bg-secondary' : 'hover:bg-secondary/60')}
-                >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: segment.color }} aria-hidden />
-                    <span className="min-w-0 flex-1 truncate font-medium">{segment.label}</span>
-                    <span className="tabular-nums text-muted-foreground">{compactCount(segment.value)}</span>
-                    <span className="w-11 text-right font-semibold tabular-nums">{((segment.value / total) * 100).toFixed(1)}%</span>
-                </motion.li>)}
+                </div>
+            </div>
+
+            {/* One row per interaction — also the gauge's labels, so no share relies on colour alone */}
+            <ul className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                {segments.map((segment, index) => {
+                    const share = (segment.value / total) * 100;
+                    return <motion.li
+                        key={segment.label}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: hovered && hovered !== segment.label ? 0.45 : 1, y: 0 }}
+                        transition={{ delay: hovered ? 0 : 0.5 + index * 0.07, duration: 0.25 }}
+                        onMouseEnter={() => setHovered(segment.label)}
+                        onMouseLeave={() => setHovered(null)}
+                        className="cursor-pointer rounded-xl px-2 py-1 transition-colors hover:bg-secondary/60"
+                    >
+                        <div className="flex items-center gap-2 text-xs">
+                            <svg viewBox="0 0 10 10" className="h-2.5 w-2.5 shrink-0" aria-hidden><circle cx="5" cy="5" r="5" fill={segment.color} /></svg>
+                            <span className="min-w-0 flex-1 truncate font-medium">{segment.label}</span>
+                            <span className="tabular-nums text-muted-foreground">{compactCount(segment.value)}</span>
+                            <span className="w-10 text-right font-semibold tabular-nums">{share.toFixed(0)}%</span>
+                        </div>
+                        <svg viewBox="0 0 100 4" preserveAspectRatio="none" className="mt-1 h-1 w-full overflow-hidden rounded-full" aria-hidden>
+                            <rect width="100" height="4" className="fill-foreground/[0.06]" />
+                            <rect width={share} height="4" fill={segment.color} />
+                        </svg>
+                    </motion.li>;
+                })}
             </ul>
-        </div> : <p className="py-2 text-xs text-muted-foreground">No verified interactions yet.</p>}
-        {facts.length > 0 && <dl className="mt-auto grid grid-cols-2 gap-2">
-            {facts.map((fact) => <div key={fact.label} className="min-w-0 rounded-2xl border border-border bg-secondary/40 px-3 py-2.5">
+        </> : <p className="py-2 text-xs text-muted-foreground">No verified interactions yet.</p>}
+
+        {/* Quieter signals: one slim strip, split by a hairline */}
+        {facts.length > 0 && <dl className="mt-auto grid grid-cols-2 divide-x divide-border rounded-2xl border border-border">
+            {facts.map((fact) => <div key={fact.label} className="min-w-0 px-3.5 py-2">
                 <dt className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><fact.icon className="h-3 w-3 shrink-0" />{fact.label}</dt>
-                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums">{fact.value}</dd>
+                <dd className="truncate font-display text-[15px] font-semibold tabular-nums">{fact.value}</dd>
             </div>)}
         </dl>}
     </div>;
@@ -837,17 +894,17 @@ export function AnalyticsTab({ campaign, influencers, isReadOnly = false, public
     };
 
     const formatOptions = [
-        { key: 'all', label: `All · ${headline.proofCount}` },
-        ...sections.map((section) => ({ key: section.format as string, label: `${section.label} · ${section.proofCount}` })),
+        { key: 'all', label: 'All', count: headline.proofCount },
+        ...sections.map((section) => ({ key: section.format as string, label: section.label, count: section.proofCount })),
     ];
 
     return (
         <div className="space-y-4">
             <UnverifiedNotice proofs={proofs} />
 
-            {/* Hero: the campaign's headline result on a dark stage — reach as the big figure with its trend,
+            {/* Hero: the campaign's headline result on a dark stage — reach as the big figure,
                 engagement as a ring, the supporting counts beside them, scope and sync along the top. */}
-            <section className="relative isolate overflow-hidden rounded-3xl p-5 text-white shadow-float sm:p-6">
+            <section className="relative isolate overflow-hidden rounded-3xl p-4 text-white shadow-float sm:p-5">
                 <span aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-neutral-900 via-neutral-950 to-black" />
                 <span aria-hidden className="pointer-events-none absolute -right-20 -top-28 -z-10 h-80 w-80 rounded-full bg-brand/30 blur-[90px]" />
                 <span aria-hidden className="pointer-events-none absolute -bottom-32 left-1/4 -z-10 h-64 w-[60%] rounded-[100%] bg-brand/10 blur-3xl" />
@@ -855,16 +912,13 @@ export function AnalyticsTab({ campaign, influencers, isReadOnly = false, public
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="-mx-1 overflow-x-auto px-1 scrollbar-hide">
-                        <div className="inline-flex shrink-0 rounded-full bg-white/10 p-1 ring-1 ring-white/10" role="tablist" aria-label="Filter analytics by format">
-                            {formatOptions.map((option) => <button
-                                key={option.key}
-                                type="button"
-                                role="tab"
-                                aria-selected={selectedFormat === option.key}
-                                onClick={() => setSelectedFormat(option.key)}
-                                className={cn('whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-200', selectedFormat === option.key ? 'bg-brand text-black' : 'text-white/60 hover:text-white')}
-                            >{option.label}</button>)}
-                        </div>
+                        <SegmentedTabs
+                            ariaLabel="Filter analytics by format"
+                            value={selectedFormat}
+                            onChange={setSelectedFormat}
+                            items={formatOptions.map((option) => ({ value: option.key, label: option.label, count: option.count }))}
+                            className="shrink-0"
+                        />
                     </div>
                     <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
                         <span className="inline-flex items-center gap-1.5 text-[11px] text-white/55" title={lastSyncTime ? `Last synced ${lastSyncTime.toLocaleString()}` : undefined}>
@@ -884,44 +938,20 @@ export function AnalyticsTab({ campaign, influencers, isReadOnly = false, public
                     </div>
                 </div>
 
-                <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_auto_minmax(0,1fr)] lg:items-end">
-                    {/* Reach, the headline, with its trend */}
+                <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_auto_minmax(0,1fr)] lg:items-center">
+                    {/* Reach, the headline */}
                     <div className="min-w-0">
                         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/55">
                             <Sparkles className="h-3.5 w-3.5 text-brand" />
                             Total reach · {scopeLabel}
                         </p>
-                        <p className="mt-2 font-display text-5xl font-semibold leading-none tracking-tight tabular-nums sm:text-6xl" title={scope.reach != null ? exactCount(scope.reach) : undefined}>
+                        <p className="mt-2 font-display text-4xl font-semibold leading-none tracking-tight tabular-nums sm:text-5xl" title={scope.reach != null ? exactCount(scope.reach) : undefined}>
                             {scope.reach != null ? compactCount(scope.reach) : '—'}
                         </p>
                         <p className="mt-2 text-xs text-white/55">
                             Unique accounts that saw {scope.proofCount === 1 ? 'the post' : `the ${scope.proofCount} posts`}
                             {creatorTotals.size > 0 && <> from {creatorTotals.size} creator{creatorTotals.size === 1 ? '' : 's'}</>}
                         </p>
-                        {trendSeries.reach.length > 1 && (
-                            <svg viewBox="0 0 300 60" preserveAspectRatio="none" className="mt-4 h-14 w-full max-w-md overflow-visible" role="img" aria-label="Reach over the last reporting days">
-                                <defs>
-                                    <linearGradient id="hero-reach-wash" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#facb03" stopOpacity={0.45} />
-                                        <stop offset="100%" stopColor="#facb03" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                {(() => {
-                                    const values = trendSeries.reach;
-                                    const max = Math.max(...values);
-                                    const min = Math.min(...values);
-                                    const span = max - min || 1;
-                                    const px = (i: number) => (i / (values.length - 1)) * 300;
-                                    const py = (v: number) => 56 - ((v - min) / span) * 50;
-                                    const line = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)} ${py(v).toFixed(1)}`).join(' ');
-                                    return <>
-                                        <path d={`${line} L300 60 L0 60 Z`} fill="url(#hero-reach-wash)" />
-                                        <path d={line} fill="none" strokeWidth={2.5} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" className="stroke-brand" />
-                                        <circle cx={px(values.length - 1)} cy={py(values[values.length - 1])} r={4} vectorEffect="non-scaling-stroke" className="fill-black stroke-brand" strokeWidth={2.5} />
-                                    </>;
-                                })()}
-                            </svg>
-                        )}
                     </div>
 
                     {/* Engagement rate as a ring */}
@@ -932,14 +962,14 @@ export function AnalyticsTab({ campaign, influencers, isReadOnly = false, public
                             const filled = rate == null ? 0 : Math.min(1, rate / 10);
                             const r = 46;
                             const c = 2 * Math.PI * r;
-                            return <span className="relative grid h-32 w-32 place-items-center">
+                            return <span className="relative grid h-24 w-24 place-items-center">
                                 <svg viewBox="0 0 110 110" className="absolute inset-0 -rotate-90" aria-hidden>
                                     <circle cx="55" cy="55" r={r} fill="none" strokeWidth="9" className="stroke-white/10" />
                                     <circle cx="55" cy="55" r={r} fill="none" strokeWidth="9" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - filled)} className="stroke-brand transition-[stroke-dashoffset] duration-1000 ease-out" />
                                 </svg>
                                 <span className="text-center">
-                                    <span className="block font-display text-2xl font-semibold tabular-nums">{rate != null ? `${rate.toFixed(2)}%` : '—'}</span>
-                                    <span className="block text-[10px] uppercase tracking-[0.1em] text-white/50">Engagement</span>
+                                    <span className="block font-display text-lg font-semibold tabular-nums">{rate != null ? `${rate.toFixed(2)}%` : '—'}</span>
+                                    <span className="block text-[9px] uppercase tracking-[0.1em] text-white/50">Engagement</span>
                                 </span>
                             </span>;
                         })()}
@@ -952,10 +982,11 @@ export function AnalyticsTab({ campaign, influencers, isReadOnly = false, public
                             { label: 'Views', value: scope.views, icon: Eye },
                             { label: 'Interactions', value: scope.interactions, icon: Activity },
                             { label: 'Posts tracked', value: scope.proofCount, icon: Layers },
-                            { label: 'Creators', value: creatorTotals.size, icon: Users },
-                        ].map((fact) => <div key={fact.label} className="min-w-0 rounded-2xl bg-white/[0.06] px-3 py-2.5 ring-1 ring-white/10">
+                            // The summary's own creator count, so it always agrees with "Posts tracked" beside it.
+                            { label: 'Creators', value: creatorTotals.size || sections.reduce((total, section) => total + (section.creatorCount ?? 0), 0), icon: Users },
+                        ].map((fact) => <div key={fact.label} className="min-w-0 rounded-xl bg-white/[0.06] px-3 py-2 ring-1 ring-white/10">
                             <dt className="flex items-center gap-1.5 text-[11px] text-white/55"><fact.icon className="h-3 w-3 shrink-0" />{fact.label}</dt>
-                            <dd className="mt-1 truncate font-display text-xl font-semibold tabular-nums">{fact.value != null ? compactCount(fact.value) : '—'}</dd>
+                            <dd className="mt-0.5 truncate font-display text-lg font-semibold tabular-nums">{fact.value != null ? compactCount(fact.value) : '—'}</dd>
                         </div>)}
                     </dl>
                 </div>
@@ -982,7 +1013,7 @@ export function AnalyticsTab({ campaign, influencers, isReadOnly = false, public
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
                 {!isReadOnly && <Panel
-                    className="lg:col-span-8"
+                    className="lg:col-span-7"
                     icon={TrendingUp}
                     title="Performance over time"
                     caption={showTrend
@@ -998,7 +1029,7 @@ export function AnalyticsTab({ campaign, influencers, isReadOnly = false, public
                     {history.isLoading
                         ? <Skeleton className="h-56 rounded-xl lg:h-64" />
                         : showTrend
-                            ? <TrendChart platform={trendPlatformShown} points={trendPoints} heightClass="h-56 lg:h-64" />
+                            ? <TrendChart platform={trendPlatformShown} points={trendPoints} heightClass="min-h-[190px] flex-1" summary />
                             : <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/30 px-6 py-10 text-center">
                                 <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
                                     {trendDays === 0
@@ -1008,17 +1039,21 @@ export function AnalyticsTab({ campaign, influencers, isReadOnly = false, public
                             </div>}
                 </Panel>}
 
-                <Panel className={isReadOnly ? 'lg:col-span-4 lg:order-last' : 'lg:col-span-4'} icon={PieChart} title="Engagement breakdown" caption={`How audiences interacted · ${scopeLabel}`}>
+                <Panel className={isReadOnly ? 'lg:col-span-5 lg:order-last' : 'lg:col-span-5'} icon={PieChart} title="Engagement breakdown" caption={`How audiences interacted · ${scopeLabel}`}>
                     <EngagementBreakdown mix={scope.mix} facts={breakdownFacts} />
-                    {costFacts.length > 0 && <div className="mt-4 border-t border-dashed border-border pt-3">
-                        <p className="mb-2 flex items-baseline justify-between gap-2 text-xs font-semibold">
-                            Cost efficiency
-                            <span className="text-[10px] font-normal text-muted-foreground">on ₹{paidSpend.toLocaleString('en-IN')} in creator fees</span>
-                        </p>
-                        <dl className="grid grid-cols-2 gap-2">
-                            {costFacts.map((fact) => <div key={fact.label} className="min-w-0 rounded-2xl border border-brand/30 bg-brand/10 px-3 py-2.5">
-                                <dt className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><fact.icon className="h-3 w-3 shrink-0" />{fact.label}</dt>
-                                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums">{rupees(fact.value)}</dd>
+                    {costFacts.length > 0 && <div className="mt-3.5 rounded-2xl border border-dashed border-border px-3.5 pb-2.5 pt-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                            <p className="font-display text-[13px] font-semibold tracking-tight">Cost efficiency</p>
+                            <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-semibold tabular-nums ring-1 ring-brand/40">
+                                ₹{paidSpend.toLocaleString('en-IN')} paid
+                            </span>
+                        </div>
+                        {/* Receipt rows: label · dotted leader · price */}
+                        <dl className="grid grid-cols-1 gap-x-5 gap-y-1.5 sm:grid-cols-2">
+                            {costFacts.map((fact) => <div key={fact.label} className="group/cost flex min-w-0 items-baseline gap-2 text-[11px]">
+                                <dt className="flex shrink-0 items-center gap-1.5 text-muted-foreground transition-colors group-hover/cost:text-foreground"><fact.icon className="h-3 w-3 shrink-0" />{fact.label}</dt>
+                                <span aria-hidden className="min-w-4 flex-1 translate-y-[-3px] border-b border-dotted border-foreground/25" />
+                                <dd className="shrink-0 font-display text-[13px] font-semibold tabular-nums">{rupees(fact.value)}</dd>
                             </div>)}
                         </dl>
                     </div>}

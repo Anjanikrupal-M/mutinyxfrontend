@@ -227,7 +227,8 @@ interface SegmentedProps {
     className?: string;
 }
 
-/** One-of-many switch (2–4 options): the selected-style thumb glides to the chosen segment. */
+/** One-of-many switch (2–4 options) in the app-wide switch style (see SegmentedTabs): a white
+ * pill with a hairline border; the black thumb glides to the chosen segment. */
 export function Segmented({ label, options, value, onChange, disabled, className }: SegmentedProps) {
     const index = options.findIndex((o) => o.value === value);
     return (
@@ -235,19 +236,17 @@ export function Segmented({ label, options, value, onChange, disabled, className
             role="radiogroup"
             aria-label={label}
             aria-disabled={disabled}
-            className={cn('relative grid rounded-full bg-secondary p-1', SEGMENT_COLS[options.length], disabled && 'opacity-60', className)}
+            className={cn('relative grid rounded-full border border-border bg-card p-1 shadow-card', SEGMENT_COLS[options.length], disabled && 'opacity-60', className)}
         >
             {index >= 0 && (
                 <span
                     aria-hidden
                     className={cn(
-                        'absolute inset-y-1 left-1 rounded-full border border-foreground bg-card transition-transform duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]',
+                        'absolute inset-y-1 left-1 rounded-full bg-foreground shadow-sm transition-transform duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]',
                         THUMB_WIDTH[options.length],
                         THUMB_OFFSET[index],
                     )}
-                >
-                    <span className="absolute inset-0 rounded-full bg-brand/20" />
-                </span>
+                />
             )}
             {options.map(({ value: option, label: text, icon: Icon }) => {
                 const active = option === value;
@@ -261,7 +260,7 @@ export function Segmented({ label, options, value, onChange, disabled, className
                         onClick={() => onChange(option)}
                         className={cn(
                             'relative z-10 flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[13px] transition-colors duration-200 disabled:cursor-not-allowed',
-                            active ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground hover:text-foreground',
+                            active ? 'font-semibold text-background' : 'font-medium text-muted-foreground hover:text-foreground',
                         )}
                     >
                         {Icon && <Icon className="h-3.5 w-3.5" />}

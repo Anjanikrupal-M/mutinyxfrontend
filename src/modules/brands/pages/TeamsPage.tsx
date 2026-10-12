@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserCheck, UserX, Building2, Plus, Sparkles, LockKeyhole, UserPlus, Search, X } from 'lucide-react';
+import { Users, UserCheck, UserX, Building2, Plus, Sparkles, LockKeyhole, Search, X } from 'lucide-react';
 import { PageHeader } from '@/shared/components/PageHeader';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { HireManagerButton } from '@/shared/components/HireManagerButton';
 import { fieldClass } from '@/shared/components/BentoUi';
@@ -20,9 +21,6 @@ type StatusFilter = 'all' | 'active' | 'inactive';
 // Staggered entrance for roster cards; Tailwind needs the full class names spelled out.
 const CARD_DELAYS = ['[animation-delay:0ms]', '[animation-delay:60ms]', '[animation-delay:120ms]', '[animation-delay:180ms]', '[animation-delay:240ms]', '[animation-delay:300ms]', '[animation-delay:360ms]', '[animation-delay:420ms]'];
 const cardDelay = (i: number) => CARD_DELAYS[Math.min(i, CARD_DELAYS.length - 1)];
-
-// Circumference of the hero's active-share ring (r = 23).
-const RING_LENGTH = 2 * Math.PI * 23;
 
 const primaryButton = 'flood-btn group flex h-10 items-center gap-2 rounded-xl border border-foreground bg-foreground px-3 text-[13px] font-semibold text-background shadow-sm duration-300 ease-out hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.97] sm:pl-2.5 sm:pr-4';
 const secondaryButton = 'h-10 gap-2 rounded-xl border-border bg-card px-3 text-[13px] font-semibold text-foreground shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-foreground hover:bg-card hover:text-foreground hover:shadow-float active:translate-y-0 active:scale-[0.97] sm:px-4';
@@ -125,59 +123,25 @@ export default function TeamsPage() {
                 </div>
             )}
 
-            {/* Overview — the roster hero (styled like the dashboard's stat cards) beside two compact tiles */}
-            <div className="mb-6 grid grid-cols-12 gap-4">
-                {/* Same look as the dashboard's stat cards: white with a light yellow tint and border, a
-                    soft glow in the top corner, a large faint icon in the bottom corner, a yellow icon
-                    tile, and the number over a short yellow rule. */}
-                <section className="relative col-span-12 flex animate-fade-up flex-col justify-between gap-6 overflow-hidden rounded-3xl border border-brand/30 bg-card bg-gradient-to-br from-brand/10 via-brand/[0.04] to-brand/25 p-5 text-foreground shadow-card lg:col-span-7">
-                    <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-brand/30 blur-3xl" />
-                    <Users aria-hidden strokeWidth={1.25} className="pointer-events-none absolute -bottom-8 right-24 h-40 w-40 -rotate-12 text-foreground/[0.05]" />
-
-                    <div className="relative flex items-start justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2.5">
-                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand text-black">
-                                    <Users className="h-4 w-4" />
-                                </span>
-                                <span>
-                                    <span className="block text-[13px] font-semibold leading-5">Your crew</span>
-                                    <span className="block text-xs leading-4 text-muted-foreground">
-                                        {totalMembers === 1 ? 'Person' : 'People'} helping run your campaigns
-                                    </span>
-                                </span>
-                            </div>
-                            <p className="mt-5 font-display text-5xl font-semibold leading-none tracking-tight tabular-nums">
-                                {isLoading ? '—' : totalMembers}
-                            </p>
-                            <span aria-hidden className="mt-3 block h-[3px] w-8 rounded-full bg-brand" />
-                        </div>
-
-                        <span className="relative grid h-14 w-14 shrink-0 place-items-center" title={`${activeShare}% active`}>
-                            <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90" aria-hidden>
-                                <circle cx="28" cy="28" r="23" fill="none" strokeWidth="5" className="stroke-foreground/10" />
-                                <circle
-                                    cx="28" cy="28" r="23" fill="none" strokeWidth="5" strokeLinecap="round"
-                                    strokeDasharray={RING_LENGTH}
-                                    strokeDashoffset={RING_LENGTH * (1 - activeShare / 100)}
-                                    className="stroke-brand transition-[stroke-dashoffset] [transition-duration:1200ms] ease-out"
-                                />
-                            </svg>
-                            <span className="relative text-[11px] font-bold tabular-nums">{activeShare}%</span>
-                        </span>
-                    </div>
-
-                    <div className="relative flex flex-wrap items-center justify-between gap-4 border-t border-dashed border-border pt-4">
-                        {/* Avatar stack of the roster */}
+            {/* Overview — four equal tiles from one design: icon, big number, a small visual of its own,
+                and a footer line. Hover blooms a glow, tilts the icon and draws a yellow line. */}
+            <div className={cn('mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2', isAgencyOwner ? 'lg:grid-cols-4' : 'lg:grid-cols-3')}>
+                <MetricTile
+                    featured
+                    icon={Users}
+                    label="Your crew"
+                    value={isLoading ? '—' : totalMembers}
+                    chip={totalMembers > 0 ? `${activeShare}% active` : undefined}
+                    visual={
                         <div className="flex items-center">
                             {teamMembers.slice(0, 5).map((m, i) => (
                                 <span
                                     key={m.id}
                                     title={m.name}
                                     className={cn(
-                                        'grid h-9 w-9 place-items-center rounded-full border-2 border-card font-display text-[11px] font-bold animate-pop',
+                                        'grid h-8 w-8 place-items-center rounded-full border-2 border-card font-display text-[10px] font-bold animate-pop transition-transform duration-300 group-hover:-translate-y-0.5',
                                         i % 2 === 0 ? 'bg-foreground text-brand' : 'bg-brand text-black',
-                                        i > 0 && '-ml-2.5',
+                                        i > 0 && '-ml-2',
                                         cardDelay(i + 2),
                                     )}
                                 >
@@ -185,80 +149,70 @@ export default function TeamsPage() {
                                 </span>
                             ))}
                             {totalMembers > 5 && (
-                                <span className="-ml-2.5 grid h-9 w-9 place-items-center rounded-full border-2 border-card bg-secondary text-[11px] font-semibold">
+                                <span className="-ml-2 grid h-8 w-8 place-items-center rounded-full border-2 border-card bg-card text-[10px] font-semibold">
                                     +{totalMembers - 5}
                                 </span>
                             )}
-                            {!isLoading && totalMembers === 0 && (
-                                <span className="text-sm text-muted-foreground">No one here yet</span>
-                            )}
+                            {!isLoading && totalMembers === 0 && <span className="text-xs text-muted-foreground">No one here yet</span>}
                         </div>
-
+                    }
+                    footer={
                         <button
                             type="button"
                             onClick={openCreate}
-                            className="flex h-9 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-semibold text-background shadow-sm transition-all duration-200 hover:shadow-float active:scale-[0.97]"
+                            className="group/invite flex items-center gap-1.5 font-semibold text-foreground"
                         >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            {isFreePlan ? 'Upgrade to invite' : 'Invite'}
+                            <span className="grid h-5 w-5 place-items-center rounded-full bg-foreground text-brand transition-transform duration-300 group-hover/invite:rotate-90">
+                                {isFreePlan ? <Sparkles className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                            </span>
+                            {isFreePlan ? 'Upgrade to invite' : 'Invite someone'}
                         </button>
-                    </div>
-                </section>
-
-                <div className="col-span-12 grid grid-cols-2 gap-4 lg:col-span-5">
-                    <OverviewTile
-                        icon={UserCheck}
-                        label="Active"
-                        value={activeMembers}
-                        hint={newestMember ? `Newest: ${newestMember.name.split(' ')[0]}` : 'Can sign in today'}
-                        dotClass="bg-success"
-                        className="[animation-delay:80ms]"
+                    }
+                />
+                <MetricTile
+                    icon={UserCheck}
+                    label="Active"
+                    value={activeMembers}
+                    suffix={totalMembers > 0 ? `/ ${totalMembers}` : undefined}
+                    tone="success"
+                    visual={<PipMeter filled={activeMembers} total={totalMembers} tone="success" />}
+                    footer={newestMember ? <>Newest: <strong className="font-semibold text-foreground">{newestMember.name.split(' ')[0]}</strong></> : 'Can sign in today'}
+                    className="[animation-delay:80ms]"
+                />
+                <MetricTile
+                    icon={UserX}
+                    label="Inactive"
+                    value={inactiveMembers}
+                    suffix={totalMembers > 0 ? `/ ${totalMembers}` : undefined}
+                    tone="muted"
+                    visual={<PipMeter filled={inactiveMembers} total={totalMembers} tone="muted" />}
+                    footer="Access paused, work kept"
+                    className="[animation-delay:140ms]"
+                />
+                {isAgencyOwner && (
+                    <MetricTile
+                        icon={Building2}
+                        label="Brands covered"
+                        value={brandsCovered}
+                        suffix={`/ ${assignableBrands.length}`}
+                        visual={<PipMeter filled={brandsCovered} total={assignableBrands.length} tone="brand" />}
+                        footer={brandsCovered >= assignableBrands.length && assignableBrands.length > 0
+                            ? <>Every brand <strong className="font-semibold text-foreground">has a manager</strong></>
+                            : `of ${assignableBrands.length} owned brands`}
+                        className="[animation-delay:200ms]"
                     />
-                    <OverviewTile
-                        icon={UserX}
-                        label="Inactive"
-                        value={inactiveMembers}
-                        hint="Access paused, work kept"
-                        dotClass="bg-muted-foreground/40"
-                        className="[animation-delay:140ms]"
-                    />
-                    {isAgencyOwner && (
-                        <OverviewTile
-                            icon={Building2}
-                            label="Brands covered"
-                            value={brandsCovered}
-                            hint={`of ${assignableBrands.length} owned brands`}
-                            dotClass="bg-brand"
-                            className="col-span-2 [animation-delay:200ms]"
-                        />
-                    )}
-                </div>
+                )}
             </div>
 
             {/* Toolbar — status segments and search */}
             {totalMembers > 0 && (
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="inline-flex w-fit rounded-full border border-border bg-card p-1 shadow-card">
-                        {filters.map((f) => (
-                            <button
-                                key={f.id}
-                                type="button"
-                                onClick={() => setStatus(f.id)}
-                                className={cn(
-                                    'flex h-8 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all duration-200',
-                                    status === f.id ? 'bg-foreground text-background shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                {f.label}
-                                <span className={cn(
-                                    'rounded-full px-1.5 text-[10px] tabular-nums',
-                                    status === f.id ? 'bg-brand text-foreground' : 'bg-secondary text-muted-foreground',
-                                )}>
-                                    {f.count}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
+                    <SegmentedTabs<StatusFilter>
+                        ariaLabel="Filter team members"
+                        value={status}
+                        onChange={setStatus}
+                        items={filters.map((f) => ({ value: f.id, label: f.label, count: f.count }))}
+                    />
 
                     {/* Glass search pill (same as the Campaigns page): frosted fill with a bright top edge
                         and a sheen that sweeps across every few seconds. On focus a soft yellow aura glows
@@ -287,7 +241,7 @@ export default function TeamsPage() {
             )}
 
             {isLoading ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5">
                     {[1, 2, 3].map((i) => (
                         <div key={i} className="h-[248px] animate-pulse rounded-3xl bg-secondary/60" />
                     ))}
@@ -315,7 +269,7 @@ export default function TeamsPage() {
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5">
                     {visibleMembers.map((member, i) => (
                         <TeamMemberCard
                             key={member.id}
@@ -361,33 +315,95 @@ export default function TeamsPage() {
     );
 }
 
-interface OverviewTileProps {
+type MetricTone = 'brand' | 'success' | 'muted';
+
+const PIP_FILL: Record<MetricTone, string> = {
+    brand: 'bg-brand',
+    success: 'bg-success',
+    muted: 'bg-foreground/45',
+};
+
+/** One pill per item (up to 12), the first `filled` coloured — reads as "3 of 4" at a glance. */
+function PipMeter({ filled, total, tone }: { filled: number; total: number; tone: MetricTone }) {
+    const count = Math.min(Math.max(total, 1), 12);
+    const lit = total > 12 ? Math.round((filled / total) * 12) : filled;
+    return (
+        <div className="flex h-2 w-full items-center gap-1" aria-label={`${filled} of ${total}`}>
+            {Array.from({ length: count }, (_, i) => (
+                <span
+                    key={i}
+                    className={cn(
+                        'h-full flex-1 rounded-full transition-all duration-500',
+                        i < lit ? PIP_FILL[tone] : 'bg-foreground/[0.08]',
+                        i < lit && 'group-hover:scale-y-125',
+                    )}
+                />
+            ))}
+        </div>
+    );
+}
+
+interface MetricTileProps {
     icon: typeof Users;
     label: string;
-    value: number;
-    hint: string;
-    dotClass: string;
+    value: number | string;
+    /** Small text after the number, e.g. "/ 4". */
+    suffix?: string;
+    /** Pill at the top right, e.g. "75% active". */
+    chip?: string;
+    visual?: ReactNode;
+    footer: ReactNode;
+    /** The roster tile: soft yellow wash instead of white. */
+    featured?: boolean;
+    tone?: MetricTone;
     className?: string;
 }
 
-function OverviewTile({ icon: Icon, label, value, hint, dotClass, className }: OverviewTileProps) {
+const TONE_DOT: Record<MetricTone, string> = { brand: 'bg-brand', success: 'bg-success', muted: 'bg-foreground/35' };
+
+/**
+ * Overview tile. Icon bead and label, a big number, a small visual, a footer line. On hover: a
+ * yellow glow blooms in the corner, the icon tilts and fills yellow, and a line draws along the
+ * bottom edge. All four tiles share it, so the row stays one size and one style.
+ */
+function MetricTile({ icon: Icon, label, value, suffix, chip, visual, footer, featured, tone = 'brand', className }: MetricTileProps) {
     return (
         <section className={cn(
-            'flex animate-fade-up flex-col justify-between rounded-3xl border border-border bg-card p-5 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-float',
+            'group relative flex min-h-[200px] animate-fade-up flex-col overflow-hidden rounded-3xl border p-5 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-float',
+            featured ? 'border-brand/40 bg-card bg-gradient-to-br from-brand/25 via-brand/10 to-card' : 'border-border bg-card hover:border-foreground/15',
             className,
         )}>
-            <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-[13px] font-semibold">
-                    <span className={cn('h-2 w-2 rounded-full', dotClass)} />
-                    {label}
+            <span aria-hidden className={cn(
+                'pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-brand/30 blur-3xl transition-all duration-500',
+                featured ? 'opacity-100' : 'scale-50 opacity-0 group-hover:scale-100 group-hover:opacity-100',
+            )} />
+            <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] origin-left scale-x-0 bg-brand transition-transform duration-500 ease-out group-hover:scale-x-100" />
+
+            <div className="relative flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2.5 text-[13px] font-semibold">
+                    <span className={cn(
+                        'grid h-9 w-9 shrink-0 place-items-center rounded-2xl transition-all duration-300 group-hover:-rotate-12 group-hover:scale-110',
+                        featured ? 'bg-foreground text-brand' : 'bg-brand/15 text-foreground ring-1 ring-brand/40 group-hover:bg-brand',
+                    )}>
+                        <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="truncate">{label}</span>
                 </span>
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-foreground text-brand">
-                    <Icon className="h-3.5 w-3.5" />
-                </span>
+                {chip && (
+                    <span className="shrink-0 rounded-full bg-card/80 px-2 py-0.5 text-[10px] font-bold tabular-nums shadow-sm backdrop-blur">{chip}</span>
+                )}
             </div>
-            <div className="mt-6">
-                <p className="font-display text-[32px] font-semibold leading-none tracking-tight tabular-nums">{value}</p>
-                <p className="mt-2 truncate text-[11px] font-medium text-muted-foreground">{hint}</p>
+
+            <p className="relative mt-5 flex items-baseline gap-1.5 font-display font-semibold leading-none tracking-tight tabular-nums">
+                <span className="text-[40px]">{value}</span>
+                {suffix && <span className="text-base text-muted-foreground">{suffix}</span>}
+            </p>
+
+            {visual && <div className="relative mt-4">{visual}</div>}
+
+            <div className="relative mt-auto flex items-center gap-2 pt-4 text-xs font-medium text-muted-foreground">
+                {typeof footer === 'string' || !featured ? <span aria-hidden className={cn('h-1.5 w-1.5 shrink-0 rounded-full', TONE_DOT[tone])} /> : null}
+                <span className="min-w-0 truncate">{footer}</span>
             </div>
         </section>
     );

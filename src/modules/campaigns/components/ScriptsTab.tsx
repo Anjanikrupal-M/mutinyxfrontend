@@ -32,6 +32,9 @@ import { ReviewCardsSkeleton } from './TabSkeletons';
 // revision-requested creators too) — mirrors REPLACEABLE_STATUSES on the backend.
 const REPLACEABLE_CI_STATUSES = new Set(['script_pending', 'script_review', 'work_pending', 'work_review']);
 
+// Script beats fade in one after another (literal classes so Tailwind sees them).
+const BEAT_DELAYS = ['[animation-delay:0ms]', '[animation-delay:70ms]', '[animation-delay:140ms]', '[animation-delay:210ms]', '[animation-delay:280ms]', '[animation-delay:350ms]'];
+
 interface ScriptsTabProps {
     campaign: Campaign;
     scripts?: any[];
@@ -630,14 +633,18 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                 }}
             >
                 {modalScript && (
-                    <DialogContent className="max-w-7xl w-[95vw] h-[92vh] max-h-[92vh] overflow-hidden p-0 flex flex-col font-sans">
-                        <DialogHeader className="p-4 md:p-5 border-b border-border shrink-0">
-                            <DialogTitle className="flex items-center gap-3 pr-10">
-                                <span className="flex items-center gap-2 text-sm md:text-base">
-                                    <FileText className="w-4 h-4 text-muted-foreground" />
-                                    Script Review
+                    <DialogContent className="max-w-7xl w-[95vw] h-[92vh] max-h-[92vh] overflow-hidden p-0 flex flex-col rounded-3xl gap-0 font-sans">
+                        <DialogHeader className="relative shrink-0 overflow-hidden border-b border-border bg-card px-4 py-3 md:px-5">
+                            <span aria-hidden className="pointer-events-none absolute -left-12 -top-16 h-40 w-72 rounded-full bg-brand/20 blur-3xl" />
+                            <DialogTitle className="relative flex items-center gap-3 pr-10">
+                                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-black">
+                                    <FileText className="h-4 w-4" />
                                 </span>
-                                {modalScript.status === 'pending' && (
+                                <span className="min-w-0">
+                                    <span className="block font-display text-base font-semibold leading-5 tracking-tight">Script review</span>
+                                    <span className="block truncate text-xs font-normal text-muted-foreground">{modalScript.influencerName || 'Creator'} · {campaign.name}</span>
+                                </span>
+                                {(modalScript.status === 'pending' || getScriptBadgeStatus(modalScript.status) === 'revision_requested') && (
                                     <StatusBadge
                                         status={getScriptBadgeStatus(modalScript.status) as any}
                                         label={getScriptBadgeLabel(modalScript.status)}
@@ -676,95 +683,44 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                         </DropdownMenu>
                                     );
                                 })()}
+                                {/* ‹ 1 of 13 › — same creator switcher as the work submission review. */}
+                                {groups.length > 1 && (
+                                    <span className="ml-auto mr-2 flex shrink-0 items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); navigateScript('prev'); }}
+                                            className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-foreground hover:text-brand"
+                                            title="Previous creator"
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </button>
+                                        <span className="px-1.5 text-xs font-semibold tabular-nums">
+                                            {groups.findIndex(g => g.influencerKey === openedInfluencerKey) + 1} <span className="text-muted-foreground">of {groups.length}</span>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); navigateScript('next'); }}
+                                            className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-foreground hover:text-brand"
+                                            title="Next creator"
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </button>
+                                    </span>
+                                )}
                             </DialogTitle>
                         </DialogHeader>
 
-                        <div className={cn(
-                            "flex-1 overflow-y-auto lg:overflow-hidden p-4 md:p-5 relative",
-                            groups.length > 1 && "lg:px-12"
-                        )}>
-                            {/* Navigation Arrows — positioned outside the grid columns, inside the extra px-12 padding */}
-                            {groups.length > 1 && (
-                                <>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigateScript('prev');
-                                        }}
-                                        className="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-xl hover:bg-primary hover:text-primary-foreground transition-premium"
-                                        title="Previous Application"
-                                    >
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigateScript('next');
-                                        }}
-                                        className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-xl hover:bg-primary hover:text-primary-foreground transition-premium"
-                                        title="Next Application"
-                                    >
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
-
-                                    {/* Mobile nav row — shown below header on small screens */}
-                                    <div className="flex lg:hidden items-center justify-between mb-3">
-                                        <button
-                                            onClick={() => navigateScript('prev')}
-                                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-premium"
-                                        >
-                                            <ChevronLeft className="w-4 h-4" /> Prev
-                                        </button>
-                                        <span className="text-xs text-muted-foreground font-semibold">
-                                            {groups.findIndex(g => g.influencerKey === openedInfluencerKey) + 1} / {groups.length}
-                                        </span>
-                                        <button
-                                            onClick={() => navigateScript('next')}
-                                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-secondary transition-premium"
-                                        >
-                                            Next <ChevronRight className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    {/* Page Indicator (desktop only) */}
-                                    <div className="hidden lg:block absolute top-2 right-14 z-50 px-2 py-1 rounded-md bg-secondary/50 backdrop-blur-sm text-[10px] font-bold text-muted-foreground">
-                                        {groups.findIndex(g => g.influencerKey === openedInfluencerKey) + 1} / {groups.length}
-                                    </div>
-                                </>
-                            )}
-
+                        {/* White body — grey is kept for small accents only. */}
+                        <div className="flex-1 overflow-y-auto lg:overflow-hidden bg-card p-4 md:p-5">
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:h-full">
-                                {/* Left Column: Campaign Details, Deliverables, Creator */}
+                                {/* Left Column: Creator + campaign facts, Deliverables */}
                                 <div className="flex flex-col lg:col-span-3 gap-4 lg:h-full lg:overflow-hidden">
-                                    <div className="hidden lg:block bg-secondary/30 border border-border rounded-xl p-4 shrink-0">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-wider">Campaign Details</p>
-                                        <p className="text-sm font-semibold">{campaign.name}</p>
-                                        <div className="space-y-1.5 mt-2 text-[11px]">
-                                            <p><span className="text-muted-foreground">Type:</span> <span className="capitalize">{campaign.type}</span></p>
-                                            <p><span className="text-muted-foreground">Status:</span> <span className="capitalize">{campaign.status}</span></p>
-                                            <p><span className="text-muted-foreground">Budget:</span> {formatCampaignBudget()}</p>
-                                            <p>
-                                                <span className="text-muted-foreground">Script Deadline:</span>{' '}
-                                                {formatShortDate(resolveScriptDeadline())}
-                                            </p>
-                                            
-                                        </div>
-                                    </div>
-
-                                    <DeliverableSlotsPanel
-                                        slots={modalSlots.slots}
-                                        selectedKey={selectedSlotKey}
-                                        versionNoun="script"
-                                        onSelect={(slot) => slot.versions[0] && setOpenedScriptId(slot.versions[0].id)}
-                                        className="lg:flex-1 lg:min-h-0 overflow-y-auto scrollbar-thin"
-                                    />
-
-                                    <div className="hidden lg:block bg-card border border-border rounded-2xl p-4 shrink-0">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-3 tracking-wider">Creator</p>
-                                        <div className="flex items-center gap-3">
-                                            <div 
+                                    <div className="relative shrink-0 overflow-hidden rounded-3xl border border-border bg-card p-4 shadow-card">
+                                        <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-brand/25 blur-2xl" />
+                                        <div className="relative flex items-center gap-3">
+                                            <div
                                                 onClick={() => setQuickViewId(modalScript.influencerId)}
-                                                className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex items-center justify-center shrink-0 cursor-pointer hover:ring-2 hover:ring-[#fedc03] transition-all"
+                                                className="grid h-12 w-12 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-full bg-brand/20 font-display text-base font-bold text-foreground ring-2 ring-brand ring-offset-2 ring-offset-card transition-transform hover:scale-105"
                                             >
                                                 {modalScript.influencerAvatar ? (
                                                     <ApiImage src={modalScript.influencerAvatar} alt={modalScript.influencerName || ''} className="w-full h-full object-cover" />
@@ -773,74 +729,134 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                                 )}
                                             </div>
                                             <div className="min-w-0">
-                                                <p 
+                                                <p
                                                     onClick={() => setQuickViewId(modalScript.influencerId)}
-                                                    className="text-sm font-semibold truncate cursor-pointer hover:text-primary transition-colors"
+                                                    className="truncate font-display text-base font-semibold tracking-tight cursor-pointer underline-offset-2 hover:underline"
                                                 >
                                                     {modalScript.influencerName || 'Unknown'}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground truncate">{modalScript.influencerHandle || '@unknown'}</p>
                                             </div>
                                         </div>
+                                        <dl className="relative mt-4 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-dashed border-border pt-3 text-[11px]">
+                                            {[
+                                                { label: 'Script due', value: formatShortDate(resolveScriptDeadline()) },
+                                                { label: 'Budget', value: formatCampaignBudget() },
+                                                { label: 'Type', value: String(campaign.type ?? '—') },
+                                                { label: 'Status', value: String(campaign.status ?? '—') },
+                                            ].map((fact) => (
+                                                <div key={fact.label} className="min-w-0">
+                                                    <dt className="text-muted-foreground">{fact.label}</dt>
+                                                    <dd className="mt-0.5 truncate font-semibold capitalize" title={fact.value}>{fact.value}</dd>
+                                                </div>
+                                            ))}
+                                        </dl>
                                     </div>
+
+                                    <DeliverableSlotsPanel
+                                        slots={modalSlots.slots}
+                                        selectedKey={selectedSlotKey}
+                                        versionNoun="script"
+                                        onSelect={(slot) => slot.versions[0] && setOpenedScriptId(slot.versions[0].id)}
+                                        className="rounded-3xl bg-card shadow-card lg:flex-1 lg:min-h-0 overflow-y-auto scrollbar-thin"
+                                    />
                                 </div>
 
-                                {/* Middle Column: Script Content */}
-                                <div className="lg:col-span-6 bg-card border border-border rounded-2xl p-4 flex flex-col overflow-y-auto">
-                                    <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground mb-3">
-                                        <span>Submitted {new Date(modalScript.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                                        {modalScript.reviewedAt && (
-                                            <span>Reviewed {new Date(modalScript.reviewedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                {/* Middle Column: the script, laid out like a page */}
+                                <div className="lg:col-span-6 flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card">
+                                    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3">
+                                        <p className="flex items-center gap-2 font-display text-sm font-semibold tracking-tight">
+                                            <span className="h-4 w-1 rounded-full bg-brand" aria-hidden />
+                                            The script
+                                        </p>
+                                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                            <span className="rounded-full border border-border px-2.5 py-1">
+                                                Submitted {new Date(modalScript.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </span>
+                                            {modalScript.reviewedAt && (
+                                                <span className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 font-semibold text-foreground/80">
+                                                    <Check className="h-3 w-3" />
+                                                    Reviewed {new Date(modalScript.reviewedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin px-5 py-4">
+                                        {hasScriptPreviewContent(modalScript) && (
+                                            <div className="mb-4">
+                                                <SubmissionMediaViewer submission={modalScript as any} showEmptyState={false} />
+                                            </div>
+                                        )}
+
+                                        {modalScript.textContent && (() => {
+                                            // A script written as beats — "Hook (0–3s): …" — reads as a timeline;
+                                            // anything else shows as written, links kept clickable.
+                                            const lines = String(modalScript.textContent).split('\n').map((l: string) => l.trim()).filter(Boolean);
+                                            const beats = lines.map((line: string) => line.match(/^([A-Za-z][\w /&-]{0,24}?)\s*\(([^)]{1,16})\)\s*:\s*(.+)$/));
+                                            const asBeats = beats.length > 1 && beats.every(Boolean);
+                                            if (!asBeats) {
+                                                return (
+                                                    <div className="text-[15px] whitespace-pre-wrap wrap-anywhere leading-7 text-foreground/90">
+                                                        {renderScriptTextWithLinks(modalScript.textContent)}
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <ol className="relative space-y-3 before:absolute before:bottom-3 before:left-[15px] before:top-3 before:w-px before:bg-border">
+                                                    {beats.map((m, i) => (
+                                                        <li key={i} className={cn('group/beat relative flex gap-3 animate-fade-up', BEAT_DELAYS[Math.min(i, BEAT_DELAYS.length - 1)])}>
+                                                            <span className="relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-card font-display text-xs font-bold tabular-nums transition-colors duration-200 group-hover/beat:border-brand group-hover/beat:bg-brand">
+                                                                {i + 1}
+                                                            </span>
+                                                            <div className="min-w-0 flex-1 rounded-2xl border border-border bg-card px-4 py-3 transition-all duration-200 group-hover/beat:border-brand/60 group-hover/beat:shadow-card">
+                                                                <p className="flex items-center gap-2">
+                                                                    <span className="font-display text-sm font-semibold tracking-tight">{m![1]}</span>
+                                                                    <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-foreground/80">{m![2]}</span>
+                                                                </p>
+                                                                <p className="mt-1 text-sm leading-6 text-foreground/80 wrap-anywhere">{renderScriptTextWithLinks(m![3])}</p>
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ol>
+                                            );
+                                        })()}
+
+                                        {(modalScript.reviewNote || (modalScript as any).externalReviewerName) && modalScript.status !== 'pending' && (
+                                            <div className={cn(
+                                                'flex items-start gap-2 p-3 rounded-2xl text-xs mt-4',
+                                                getScriptBadgeStatus(modalScript.status) === 'revision_requested'
+                                                    ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                                                    : 'border border-border'
+                                            )}>
+                                                <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                                <div className="min-w-0 flex-1 space-y-1">
+                                                    <p className="font-bold">
+                                                        {(modalScript as any).externalReviewerName
+                                                            ? `Reviewed by ${(modalScript as any).externalReviewerName} (via shared link)`
+                                                            : 'Reviewer note'}
+                                                    </p>
+                                                    {modalScript.reviewNote && (
+                                                        <p className="break-words break-all whitespace-pre-wrap">{modalScript.reviewNote}</p>
+                                                    )}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
-
-                                    {hasScriptPreviewContent(modalScript) && (
-                                        <SubmissionMediaViewer submission={modalScript as any} showEmptyState={false} />
-                                    )}
-
-                                    {modalScript.textContent && (
-                                        <div className="mt-4 shrink-0 rounded-lg border border-border bg-secondary/30 overflow-hidden">
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-3 pt-2.5 pb-1.5 border-b border-border/60">Script Description</p>
-                                            <div className="p-3 text-sm whitespace-pre-wrap wrap-anywhere leading-6 italic max-h-64 overflow-y-auto scrollbar-thin">
-                                                {renderScriptTextWithLinks(modalScript.textContent)}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {(modalScript.reviewNote || (modalScript as any).externalReviewerName) && modalScript.status !== 'pending' && (
-                                        <div className={cn(
-                                            'flex items-start gap-2 p-3 rounded-lg text-xs mt-4',
-                                            getScriptBadgeStatus(modalScript.status) === 'revision_requested'
-                                                ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                                                : 'bg-secondary'
-                                        )}>
-                                            <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                            <div className="min-w-0 flex-1 space-y-1">
-                                                <p className="font-bold">
-                                                    {(modalScript as any).externalReviewerName
-                                                        ? `Reviewed by ${(modalScript as any).externalReviewerName} (via shared link)`
-                                                        : 'Reviewer note'}
-                                                </p>
-                                                {modalScript.reviewNote && (
-                                                    <p className="break-words break-all whitespace-pre-wrap">{modalScript.reviewNote}</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
 
-                                {/* Right Column: Actions + History */}
-                                <div className="lg:col-span-3 lg:flex lg:flex-col gap-4 overflow-y-auto">
-                                    {!isReadOnly && <div className="bg-secondary/30 border border-border rounded-xl p-4 shrink-0">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-3 tracking-wider">Actions</p>
+                                {/* Right Column: Decision + Versions */}
+                                <div className="lg:col-span-3 lg:flex lg:flex-col gap-4 overflow-y-auto scrollbar-hide">
+                                    {!isReadOnly && <div className="rounded-3xl border border-border bg-card p-4 shrink-0 shadow-card">
+                                        <p className="mb-3 font-display text-sm font-semibold tracking-tight">Your decision</p>
                                         <CopyReviewLinkButton
                                             kind="script"
                                             shareToken={(modalScript as any).shareToken}
                                             disabled={modalScript.status !== 'pending'}
-                                            className="w-full mb-2"
+                                            className="w-full mb-3"
                                         />
                                         {modalScript.status === 'pending' ? (
-                                            <div className="flex flex-col gap-2">
+                                            <div className="flex flex-col gap-3">
                                                 <button
                                                     onClick={() => {
                                                         setRevisionForScriptId(null);
@@ -848,21 +864,21 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                                         setAcceptForScriptId((prev) => (prev === modalScript.id ? null : modalScript.id));
                                                     }}
                                                     disabled={approveScript.isPending || requestRevision.isPending}
-                                                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-premium disabled:opacity-50"
+                                                    className="group/approve flex h-11 items-center justify-center gap-2 rounded-full bg-brand pl-1.5 pr-4 text-sm font-semibold text-black shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-float active:translate-y-0 active:scale-[0.98] disabled:opacity-50"
                                                 >
-                                                    <Check className="w-3.5 h-3.5" />
-                                                    Accept Script
+                                                    <span className="grid h-8 w-8 place-items-center rounded-full bg-card transition-transform duration-200 group-hover/approve:scale-110"><Check className="h-4 w-4" strokeWidth={3} /></span>
+                                                    <span className="flex-1 pr-8 text-center">Accept script</span>
                                                 </button>
 
                                                 {acceptForScriptId === modalScript.id && (
-                                                    <div className="space-y-2 rounded-lg border border-border bg-background p-2">
+                                                    <div className="space-y-2 rounded-2xl border border-border bg-card p-2.5 animate-in fade-in slide-in-from-top-1">
                                                         <textarea
                                                             value={acceptNote}
                                                             onChange={(e) => setAcceptNote(e.target.value.slice(0, 300))}
                                                             rows={3}
                                                             maxLength={300}
                                                             placeholder="Add a message for the creator (optional)..."
-                                                            className="w-full px-3 py-2 rounded-lg border border-border bg-secondary/20 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                                                            className="w-full text-xs p-2.5 rounded-xl border border-border bg-card resize-none min-h-[88px] focus:outline-none focus:border-foreground focus:ring-4 focus:ring-foreground/10"
                                                         />
                                                         <p className="text-right text-[10px] text-muted-foreground">{acceptNote.length}/300</p>
                                                         <div className="flex justify-end gap-2">
@@ -872,7 +888,7 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                                                     setAcceptForScriptId(null);
                                                                     setAcceptNote('');
                                                                 }}
-                                                                className="px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-premium"
+                                                                className="h-8 px-3 rounded-full border border-border bg-card text-xs font-semibold transition-colors hover:border-foreground"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -880,10 +896,10 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                                                 type="button"
                                                                 onClick={() => void handleApprove(modalScript.id, acceptNote)}
                                                                 disabled={approveScript.isPending}
-                                                                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-premium disabled:opacity-50 flex items-center gap-2"
+                                                                className="h-8 px-3.5 rounded-full bg-foreground text-background text-xs font-semibold transition-all hover:shadow-card disabled:opacity-50 flex items-center gap-2"
                                                             >
                                                                 {approveScript.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
-                                                                Confirm Accept
+                                                                Confirm accept
                                                             </button>
                                                         </div>
                                                     </div>
@@ -893,24 +909,24 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                                     onClick={() => {
                                                         setAcceptForScriptId(null);
                                                         setAcceptNote('');
-                                                        setRevisionForScriptId(modalScript.id);
+                                                        setRevisionForScriptId((prev) => (prev === modalScript.id ? null : modalScript.id));
                                                     }}
                                                     disabled={approveScript.isPending || requestRevision.isPending}
-                                                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-amber-600/30 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-premium disabled:opacity-50"
+                                                    className="flex h-11 items-center justify-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground transition-all duration-200 hover:border-foreground disabled:opacity-50"
                                                 >
                                                     <MessageSquare className="w-3.5 h-3.5" />
-                                                    Request Revision
+                                                    Request revision
                                                 </button>
 
                                                 {revisionForScriptId === modalScript.id && (
-                                                    <div className="space-y-2 rounded-lg border border-border bg-background p-2">
+                                                    <div className="space-y-2 rounded-2xl border border-border bg-card p-2.5 animate-in fade-in slide-in-from-top-1">
                                                         <textarea
                                                             value={reviewNote}
                                                             onChange={(e) => setReviewNote(e.target.value.slice(0, 500))}
                                                             rows={4}
                                                             maxLength={500}
                                                             placeholder="Type your feedback here..."
-                                                            className="w-full px-3 py-2 rounded-lg border border-border bg-secondary/20 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                                                            className="w-full text-xs p-2.5 rounded-xl border border-border bg-card resize-none min-h-[88px] focus:outline-none focus:border-foreground focus:ring-4 focus:ring-foreground/10"
                                                         />
                                                         <p className="text-right text-[10px] text-muted-foreground">{reviewNote.length}/500</p>
                                                         <div className="flex justify-end gap-2">
@@ -920,7 +936,7 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                                                     setRevisionForScriptId(null);
                                                                     setReviewNote('');
                                                                 }}
-                                                                className="px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-premium"
+                                                                className="h-8 px-3 rounded-full border border-border bg-card text-xs font-semibold transition-colors hover:border-foreground"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -928,27 +944,28 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                                                 type="button"
                                                                 onClick={() => void handleRequestRevision()}
                                                                 disabled={requestRevision.isPending || !reviewNote.trim()}
-                                                                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-premium disabled:opacity-50 flex items-center gap-2"
+                                                                className="h-8 px-3.5 rounded-full bg-foreground text-background text-xs font-semibold transition-all hover:shadow-card disabled:opacity-50 flex items-center gap-2"
                                                             >
                                                                 {requestRevision.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
-                                                                Send Feedback
+                                                                Send feedback
                                                             </button>
                                                         </div>
                                                     </div>
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="text-xs text-muted-foreground text-center py-4 bg-background/50 rounded-lg border border-border">
-                                                Already reviewed.
+                                            <div className="flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-4 text-xs text-muted-foreground">
+                                                <Check className="h-3.5 w-3.5" />
+                                                Already reviewed
                                             </div>
                                         )}
                                     </div>}
 
-                                    <div className="bg-secondary/20 border border-border rounded-xl p-3 shrink-0">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2 tracking-wider">
-                                            Versions{selectedSlot && <span className="font-medium normal-case tracking-normal"> · {selectedSlot.label}</span>}
+                                    <div className="rounded-3xl border border-border bg-card p-4 shrink-0 shadow-card">
+                                        <p className="mb-3 font-display text-sm font-semibold tracking-tight">
+                                            Versions{selectedSlot && <span className="font-sans text-xs font-normal text-muted-foreground"> · {selectedSlot.label}</span>}
                                         </p>
-                                        <div className="space-y-1.5 overflow-y-auto max-h-[300px] pr-1">
+                                        <div className="relative space-y-2 overflow-y-auto max-h-[300px] pr-1">
                                             {(() => {
                                                 // Only the selected deliverable's scripts — a revision and its resubmission
                                                 // are versions of one deliverable, not separate deliverables.
@@ -961,36 +978,39 @@ export function ScriptsTab({ campaign, scripts: initialScripts, isReadOnly }: Sc
                                                         .map((sv, index) => [sv.id, index + 1] as const)
                                                 );
 
-                                                return currentVersions.map((sv) => (
-                                                    <button
-                                                        key={sv.id}
-                                                        type="button"
-                                                        onClick={() => setOpenedScriptId(sv.id)}
-                                                        className={cn(
-                                                            'w-full text-left p-2 rounded-lg border text-[10px] transition-premium',
-                                                            sv.id === modalScript.id
-                                                                ? 'border-primary/50 bg-primary/5 shadow-sm'
-                                                                : 'border-border bg-card hover:bg-secondary'
-                                                        )}
-                                                    >
-                                                        <div className="flex items-center justify-between mb-0.5">
-                                                            <span className="font-bold flex items-center gap-1">
-                                                                <FileText className="w-2.5 h-2.5" />
-                                                                {`Script ${versionNumberById.get(sv.id) ?? 1}`}
+                                                return currentVersions.map((sv) => {
+                                                    const current = sv.id === modalScript.id;
+                                                    return (
+                                                        <button
+                                                            key={sv.id}
+                                                            type="button"
+                                                            onClick={() => setOpenedScriptId(sv.id)}
+                                                            className={cn(
+                                                                'flex w-full items-center gap-2.5 rounded-2xl border p-2.5 text-left transition-all duration-200',
+                                                                current
+                                                                    ? 'border-brand bg-brand/10 shadow-sm'
+                                                                    : 'border-border bg-card hover:border-foreground/30'
+                                                            )}
+                                                        >
+                                                            <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-full font-display text-xs font-bold tabular-nums', current ? 'bg-brand text-black' : 'border border-border')}>
+                                                                v{versionNumberById.get(sv.id) ?? 1}
+                                                            </span>
+                                                            <span className="min-w-0 flex-1">
+                                                                <span className="block text-xs font-semibold">{`Script ${versionNumberById.get(sv.id) ?? 1}`}</span>
+                                                                <span className="block text-[10px] text-muted-foreground">
+                                                                    {new Date(sv.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                                </span>
                                                             </span>
                                                             {(sv.status === 'pending' || getScriptBadgeStatus(sv.status) === 'revision_requested') && (
                                                                 <StatusBadge
                                                                     status={getScriptBadgeStatus(sv.status) as any}
                                                                     label={getScriptBadgeLabel(sv.status)}
-                                                                    className="scale-75 origin-right"
+                                                                    className="scale-90 origin-right"
                                                                 />
                                                             )}
-                                                        </div>
-                                                        <p className="text-muted-foreground opacity-70">
-                                                            {new Date(sv.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                                        </p>
-                                                    </button>
-                                                ));
+                                                        </button>
+                                                    );
+                                                });
                                             })()}
                                         </div>
                                     </div>

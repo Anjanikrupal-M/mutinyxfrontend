@@ -32,7 +32,6 @@ import {
     Landmark,
     Layers,
     LayoutGrid,
-    ListChecks,
     Loader2,
     Lock,
     LockKeyhole,
@@ -2742,19 +2741,6 @@ export default function CampaignBuilderPage() {
                     <Sparkles className="mode-icon mode-icon-sparkles h-4 w-4" />
                     AI Strategist
                 </button>
-                {/* Only on the AI Strategist screen: the way back to the form. On the form itself the
-                    button would just repeat where you already are, so it is hidden there. */}
-                {activeTab === 'ai' && (
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('manual')}
-                        className="mode-btn flex h-9 items-center gap-2 rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-foreground/80 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-foreground hover:text-foreground hover:shadow-float active:translate-y-0 active:scale-[0.97]"
-                    >
-                        <ListChecks className="mode-icon mode-icon-steps h-4 w-4" />
-                        <span className="hidden sm:inline">Step-by-step builder</span>
-                        <span className="sm:hidden">Builder</span>
-                    </button>
-                )}
             </div>
         </div>
     );

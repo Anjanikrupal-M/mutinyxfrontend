@@ -6,10 +6,12 @@ import { toast } from 'sonner';
 import { http } from '@/core/http';
 import { API } from '@/core/api';
 import { getSupportInfo } from './api';
-import { Mail, MessageSquare, Phone, LifeBuoy, HelpCircle, Loader2, Clock, CheckCircle2, XCircle, PhoneCall, Crown, LockKeyhole, Sparkles, ArrowUpRight, Send } from 'lucide-react';
+import { Mail, MessageSquare, Phone, LifeBuoy, HelpCircle, Loader2, Clock, CheckCircle2, XCircle, PhoneCall, Crown, LockKeyhole, Sparkles, ArrowUpRight, Send, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { PageHeader } from '@/shared/components/PageHeader';
+import { SEGMENT_LIST, SEGMENT_TRIGGER } from '@/shared/components/SegmentedTabs';
+import { ProgressPillButton, useDoneFlash } from '@/shared/components/ProgressPillButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -23,10 +25,12 @@ import { format } from 'date-fns';
 
 // FAQs are now fetched dynamically from the API — admin-controlled.
 
+
 export default function SupportPage() {
     const navigate = useNavigate();
     const [subject, setSubject] = useState("");
     const [message, setMessage] = useState("");
+    const ticketSent = useDoneFlash();
     const user = useAuthStore((state) => state.user);
     const { data: supportInfo } = useQuery({ queryKey: ['supportInfo'], queryFn: getSupportInfo });
 
@@ -67,6 +71,7 @@ export default function SupportPage() {
     const mutation = useMutation({
         mutationFn: sendSupportMessage,
         onSuccess: () => {
+            ticketSent.flash();
             toast.success("Ticket submitted successfully!", {
                 description: "Our support team will get back to you shortly."
             });
@@ -142,10 +147,19 @@ export default function SupportPage() {
     // Contact channels shown as the row of tiles at the top of the Contact tab.
     const supportEmail = supportInfo?.email || 'connect@mutinytalent.com';
     const supportPhone = supportInfo?.phone || '+91 79958 96438';
+    // Live chat runs 9 AM – 5 PM US Eastern, Monday to Friday; work out whether that's right now.
+    const easternNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const chatOpen = easternNow.getDay() >= 1 && easternNow.getDay() <= 5 && easternNow.getHours() >= 9 && easternNow.getHours() < 17;
+    const copy = (value: string, what: string) => {
+        void navigator.clipboard?.writeText(value).then(
+            () => toast.success(`${what} copied`),
+            () => toast.error(`Couldn't copy the ${what.toLowerCase()}`),
+        );
+    };
     const contactMethods = [
-        { icon: Mail, label: 'Email', value: supportEmail, href: `mailto:${supportEmail}` },
-        { icon: Phone, label: 'Phone', value: supportPhone, href: `tel:${supportPhone.replace(/\s+/g, '')}` },
-        { icon: MessageSquare, label: 'Live Chat', value: '9 AM - 5 PM EST', href: undefined },
+        { icon: Mail, label: 'Email', value: supportEmail, href: `mailto:${supportEmail}`, action: 'Send an email', copyLabel: 'Email' },
+        { icon: Phone, label: 'Phone', value: supportPhone, href: `tel:${supportPhone.replace(/\s+/g, '')}`, action: 'Call us', copyLabel: 'Number' },
+        { icon: MessageSquare, label: 'Live chat', value: '9 AM – 5 PM EST', href: undefined, action: undefined, copyLabel: undefined },
     ];
 
     return (
@@ -159,11 +173,11 @@ export default function SupportPage() {
             />
 
             <Tabs defaultValue="contact" className="w-full">
-                <TabsList className="mb-6 h-11 rounded-full bg-secondary p-1">
-                    <TabsTrigger value="contact" className="rounded-full px-4 text-[13px] font-semibold data-[state=active]:shadow-sm">
+                <TabsList className={cn(SEGMENT_LIST, 'mb-6')}>
+                    <TabsTrigger value="contact" className={SEGMENT_TRIGGER}>
                         Contact & FAQs
                     </TabsTrigger>
-                    <TabsTrigger value="history" className="rounded-full px-4 text-[13px] font-semibold data-[state=active]:shadow-sm">
+                    <TabsTrigger value="history" className={SEGMENT_TRIGGER}>
                         Ticket History
                     </TabsTrigger>
                 </TabsList>
@@ -175,33 +189,63 @@ export default function SupportPage() {
                             <LifeBuoy className="h-4 w-4 text-foreground/60" />
                             <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Contact Us</h2>
                         </div>
-                        <div className="grid grid-cols-1 divide-y divide-foreground/[0.07] overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-foreground/[0.07] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                            {contactMethods.map((method, i) => {
-                                const content = (
-                                    <>
-                                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand/20 text-foreground transition-colors duration-300 group-hover:bg-brand">
-                                            <method.icon className="h-[18px] w-[18px]" />
+                        {/* Three compact cards, one per channel: icon, label and value on one row, with small
+                            round actions on the right (copy, then open) or the live status for chat. */}
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            {contactMethods.map((method, i) => (
+                                <div
+                                    key={method.label}
+                                    className={cn(
+                                        'group relative flex animate-fade-up items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card p-3 pr-3.5 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-float',
+                                        ['[animation-delay:60ms]', '[animation-delay:120ms]', '[animation-delay:180ms]'][i],
+                                    )}
+                                >
+                                    {/* Soft yellow wash that slides in from the left on hover */}
+                                    <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-1/2 -translate-x-full bg-gradient-to-r from-brand/15 to-transparent transition-transform duration-500 ease-out group-hover:translate-x-0" />
+
+                                    <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40 transition-all duration-300 group-hover:-rotate-6 group-hover:bg-brand">
+                                        <method.icon className="h-4 w-4" />
+                                    </span>
+
+                                    <span className="relative min-w-0 flex-1">
+                                        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                                            {method.label}
+                                            {!method.copyLabel && (
+                                                <span className={cn('flex items-center gap-1 normal-case tracking-normal', chatOpen ? 'text-emerald-600' : 'text-muted-foreground')}>
+                                                    <span className="relative flex h-1.5 w-1.5">
+                                                        {chatOpen && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
+                                                        <span className={cn('relative inline-flex h-1.5 w-1.5 rounded-full', chatOpen ? 'bg-emerald-500' : 'bg-muted-foreground/50')} />
+                                                    </span>
+                                                    {chatOpen ? 'Online' : 'Offline'}
+                                                </span>
+                                            )}
                                         </span>
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{method.label}</span>
-                                            <span className="mt-0.5 block truncate text-sm font-semibold">{method.value}</span>
+                                        <span className="mt-0.5 block truncate font-display text-sm font-semibold tracking-tight" title={method.value}>{method.value}</span>
+                                    </span>
+
+                                    {method.copyLabel && (
+                                        <span className="relative flex shrink-0 items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => copy(method.value, method.copyLabel!)}
+                                                aria-label={`Copy ${method.copyLabel.toLowerCase()}`}
+                                                title={`Copy ${method.copyLabel.toLowerCase()}`}
+                                                className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                                            >
+                                                <Copy className="h-3.5 w-3.5" />
+                                            </button>
+                                            <a
+                                                href={method.href}
+                                                aria-label={method.action}
+                                                title={method.action}
+                                                className="group/act grid h-8 w-8 place-items-center rounded-full border border-border text-foreground transition-all duration-200 hover:border-foreground hover:bg-foreground hover:text-brand"
+                                            >
+                                                <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/act:rotate-45" />
+                                            </a>
                                         </span>
-                                        {method.href && (
-                                            <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
-                                        )}
-                                    </>
-                                );
-                                const tileClass = cn(
-                                    'group flex animate-fade-up items-center gap-4 px-5 py-4 transition-colors duration-300',
-                                    method.href && 'hover:bg-secondary/60',
-                                    ['[animation-delay:60ms]', '[animation-delay:120ms]', '[animation-delay:180ms]'][i],
-                                );
-                                return method.href ? (
-                                    <a key={method.label} href={method.href} className={tileClass}>{content}</a>
-                                ) : (
-                                    <div key={method.label} className={tileClass}>{content}</div>
-                                );
-                            })}
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     </section>
 
@@ -237,25 +281,18 @@ export default function SupportPage() {
                                     />
                                     <p className="text-right text-[11px] tabular-nums text-muted-foreground">{message.length}/2000</p>
                                 </div>
-                                <button
-                                    type="button"
+                                <ProgressPillButton
+                                    phase={mutation.isPending ? 'busy' : ticketSent.done ? 'done' : 'idle'}
+                                    icon={Send}
+                                    labels={{ idle: 'Submit ticket', busy: 'Sending…', done: 'Ticket sent!' }}
+                                    className="w-full"
+                                    disabled={!subject.trim() || !message.trim()}
                                     onClick={() => {
                                         handleSendTicket();
                                         // Refetch history right after a short delay so the new ticket shows up if user switches tabs
                                         setTimeout(() => refetchHistory(), 500);
                                     }}
-                                    disabled={mutation.isPending || !subject.trim() || !message.trim()}
-                                    className="flood-btn group/send flex h-11 w-full items-center gap-2 rounded-full bg-foreground pl-1.5 pr-5 text-sm font-semibold text-background duration-300 hover:shadow-float disabled:pointer-events-none disabled:opacity-50"
-                                >
-                                    <span className="flood-btn-icon grid h-8 w-8 place-items-center rounded-full bg-brand text-black">
-                                        {mutation.isPending ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Send className="h-3.5 w-3.5 transition-transform duration-300 group-hover/send:-rotate-12" />
-                                        )}
-                                    </span>
-                                    <span className="flood-btn-label flex-1 pr-8 text-center">Submit Ticket</span>
-                                </button>
+                                />
                             </div>
                         </section>
 

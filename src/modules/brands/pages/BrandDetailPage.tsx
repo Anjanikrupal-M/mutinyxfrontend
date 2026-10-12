@@ -1,10 +1,12 @@
-import { useState, type ComponentProps } from 'react';
+import { Fragment, useState, type ComponentProps } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Archive,
+    ArrowUpRight,
     CalendarDays,
     Check,
     ChevronLeft,
+    ChevronRight,
     Globe,
     Languages,
     Loader2,
@@ -12,7 +14,7 @@ import {
     MapPin,
     Megaphone,
     Pencil,
-    Rocket,
+    Plus,
     UserCheck,
     UserPlus,
     UserX,
@@ -30,10 +32,6 @@ import { useSetTeamMemberStatus, useUnassignTeamMemberBrand } from '../hooks/use
 import { useDeactivateBrand } from '../hooks/useBrandLifecycle';
 import { EditBrandModal } from '../components/EditBrandModal';
 import { AddTeamMemberModal } from '../components/AddTeamMemberModal';
-import { coverTint } from '../components/brandCover';
-
-// Circumference of the Live-now ring (r = 22).
-const RING_LENGTH = 2 * Math.PI * 22;
 
 // Staggered entrance for list rows; Tailwind needs the full class names spelled out.
 const ROW_DELAYS = ['[animation-delay:280ms]', '[animation-delay:330ms]', '[animation-delay:380ms]', '[animation-delay:430ms]', '[animation-delay:480ms]'];
@@ -54,9 +52,9 @@ function ManagerRow({
     isTogglingStatus: boolean;
 }) {
     return (
-        <div className="group flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-secondary/60">
+        <div className="group flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-brand/[0.05]">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-9 h-9 rounded-full bg-brand/20 ring-2 ring-card flex items-center justify-center font-display text-sm font-bold text-foreground shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-brand/15 ring-1 ring-brand/40 flex items-center justify-center font-display text-sm font-bold text-foreground shrink-0 transition-colors group-hover:bg-brand">
                     {manager.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
@@ -67,9 +65,9 @@ function ManagerRow({
             <div className="flex items-center gap-2 shrink-0">
                 <span className={cn(
                     'flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full font-semibold',
-                    manager.isActive ? 'bg-secondary text-foreground' : 'bg-muted text-muted-foreground',
+                    manager.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-muted text-muted-foreground',
                 )}>
-                    <span className={cn('h-1.5 w-1.5 rounded-full', manager.isActive ? 'bg-brand' : 'bg-foreground/25')} />
+                    <span className={cn('h-1.5 w-1.5 rounded-full', manager.isActive ? 'bg-emerald-500' : 'bg-foreground/25')} />
                     {manager.isActive ? 'Active' : 'Inactive'}
                 </span>
                 {/* Account-wide activate/deactivate — distinct from the X (which only
@@ -80,7 +78,7 @@ function ManagerRow({
                     disabled={isTogglingStatus}
                     title={manager.isActive ? 'Deactivate this manager account' : 'Reactivate this manager account'}
                     className={cn(
-                        'p-1.5 rounded-lg text-muted-foreground transition-premium disabled:opacity-50',
+                        'p-1.5 rounded-lg text-muted-foreground transition-premium disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100',
                         manager.isActive ? 'hover:text-destructive hover:bg-destructive/10' : 'hover:text-green-600 hover:bg-green-500/10',
                     )}
                 >
@@ -97,7 +95,7 @@ function ManagerRow({
                     onClick={onRemove}
                     disabled={isRemoving}
                     title="Remove from this brand"
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-premium disabled:opacity-50"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-premium disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                 >
                     {isRemoving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
                 </button>
@@ -218,36 +216,69 @@ export default function BrandDetailPage() {
 
     return (
         <div className="w-full animate-fade-in pb-10">
-            {/* ── Hero: the brand's own cover (blurred logo over its tint), logo overlapping, actions on the cover ── */}
-            <section className="relative mb-5 animate-fade-up overflow-hidden rounded-3xl border border-foreground/[0.08] bg-card shadow-card">
-                <div className={cn('relative h-36 overflow-hidden bg-gradient-to-br', coverTint(brand.id))}>
-                    {brand.brandLogoUrl && (
-                        <ApiImage
-                            src={brand.brandLogoUrl}
-                            alt=""
-                            className="absolute inset-0 h-full w-full scale-150 object-cover opacity-40 blur-3xl saturate-150"
-                            fallbackText=""
-                        />
-                    )}
-                    <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:16px_16px]" />
+            {/* ── Hero: a brand passport. Left, the brand as a premium membership card (tilted in 3D,
+                straightens with a light sweep on hover). Right, an editorial column: actions, the
+                brand's story set as a headline, and its numbers as big airy figures. ── */}
+            <section className="mb-5 grid animate-fade-up grid-cols-1 gap-8 rounded-[32px] border border-border bg-card p-5 shadow-card sm:p-7 lg:grid-cols-[360px_minmax(0,1fr)]">
+                {/* The card */}
+                <div className="flex items-center justify-center [perspective:1100px]">
+                    <div className="group/card relative aspect-[1.586] w-full max-w-[360px] overflow-hidden rounded-[26px] border border-brand/40 bg-gradient-to-br from-brand/30 via-brand/10 to-card p-5 shadow-[0_24px_50px_-24px_rgb(250_203_3_/_0.75)] transition-transform duration-700 ease-out [transform:rotateY(-12deg)_rotateX(6deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)]">
+                        <span aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand/40 blur-3xl" />
+                        {/* Light sweep on hover */}
+                        <span aria-hidden className="pointer-events-none absolute -inset-y-8 -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-0 transition-all duration-1000 ease-out group-hover/card:left-[120%] group-hover/card:opacity-100" />
 
-                    <div className="absolute inset-x-4 top-4 flex items-center justify-between gap-2">
+                        <div className="relative flex h-full flex-col justify-between">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="h-12 w-12 overflow-hidden rounded-2xl bg-card shadow-card ring-2 ring-card">
+                                    <ApiImage src={brand.brandLogoUrl} alt={brand.brandName} className="h-full w-full object-cover text-lg" fallbackText={brand.brandName.charAt(0)} />
+                                </div>
+                                <span className="text-right text-[9px] font-bold uppercase leading-tight tracking-[0.2em] text-foreground/55">
+                                    MutinyX<br />{isPrimaryBrand ? 'Your brand' : isOwned ? 'Client brand' : 'Managed brand'}
+                                </span>
+                            </div>
+
+                            {/* Contact chip, drawn */}
+                            <span aria-hidden className="relative h-7 w-10 overflow-hidden rounded-md bg-gradient-to-br from-amber-200 via-amber-300 to-amber-500 shadow-inner ring-1 ring-amber-600/30">
+                                <span className="absolute inset-x-0 top-1/2 h-px bg-amber-700/30" />
+                                <span className="absolute inset-y-0 left-1/3 w-px bg-amber-700/30" />
+                                <span className="absolute inset-y-0 left-2/3 w-px bg-amber-700/30" />
+                            </span>
+
+                            <div className="flex items-end justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="truncate font-display text-2xl font-semibold leading-tight tracking-tight">{brand.brandName}</p>
+                                    <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground/55">
+                                        Brand since {new Date(brand.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                                    </p>
+                                </div>
+                                {isCurrentBrand && (
+                                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-foreground px-2 py-1 text-[10px] font-bold text-brand">
+                                        <Check className="h-3 w-3 stroke-[3]" /> Active
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* The editorial column */}
+                <div className="flex min-w-0 flex-col">
+                    <div className="flex items-center justify-between gap-2">
                         <button
                             type="button"
                             onClick={() => navigate('/brands?tab=profiles')}
-                            title="Back to Brands"
-                            className="flex h-9 items-center gap-1 rounded-full bg-card/80 pl-2 pr-3.5 text-xs font-semibold shadow-sm backdrop-blur transition-all hover:-translate-x-0.5 hover:bg-card"
+                            className="group/back flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
                         >
-                            <ChevronLeft className="h-4 w-4" />
-                            Brands
+                            <ChevronLeft className="h-4 w-4 transition-transform group-hover/back:-translate-x-0.5" />
+                            All brands
                         </button>
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={() => setEditOpen(true)}
-                                className="flex h-9 items-center gap-1.5 rounded-full bg-card/80 px-3.5 text-xs font-semibold shadow-sm backdrop-blur transition-colors hover:bg-brand"
+                                className="group/edit flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-xs font-semibold transition-all hover:border-foreground"
                             >
-                                <Pencil className="h-3.5 w-3.5" />
+                                <Pencil className="h-3.5 w-3.5 transition-transform duration-300 group-hover/edit:-rotate-12" />
                                 Edit
                             </button>
                             {/* Owner-only "delete" — soft deactivation; a manager viewing an
@@ -259,7 +290,7 @@ export default function BrandDetailPage() {
                                     onClick={handleDeactivateBrand}
                                     disabled={isDeactivating}
                                     title="Deactivate this brand"
-                                    className="flex h-9 items-center gap-1.5 rounded-full bg-card/80 px-3.5 text-xs font-semibold text-destructive shadow-sm backdrop-blur transition-colors hover:bg-destructive hover:text-white disabled:opacity-60"
+                                    className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-[#E50914] hover:text-[#E50914] disabled:opacity-60"
                                 >
                                     {isDeactivating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
                                     <span className="hidden sm:inline">Deactivate</span>
@@ -267,175 +298,147 @@ export default function BrandDetailPage() {
                             )}
                         </div>
                     </div>
-                </div>
 
-                <div className="relative flex flex-col gap-4 px-6 pb-6 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
-                        <div className="-mt-12 h-24 w-24 shrink-0 animate-pop overflow-hidden rounded-3xl bg-secondary shadow-float ring-4 ring-card [animation-delay:150ms]">
-                            <ApiImage src={brand.brandLogoUrl} alt={brand.brandName} className="h-full w-full object-cover text-3xl" fallbackText={brand.brandName.charAt(0)} />
+                    <p className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {brand.industry && <span>{brand.industry}</span>}
+                        {brand.industry && location && <span className="h-1 w-1 rounded-full bg-brand" />}
+                        {location && <span>{location}</span>}
+                    </p>
+                    {/* The brand's story as a pull quote: a big yellow quote mark, light open type, and
+                        the brand's own name picked out with a highlighter stroke. */}
+                    <h1 className="relative mt-4 pl-10 font-display text-xl font-normal leading-[1.6] tracking-tight text-foreground/75 sm:pl-12 sm:text-[22px]">
+                        <span aria-hidden className="absolute -top-3 left-0 select-none font-display text-6xl font-bold leading-none text-brand sm:text-7xl">&ldquo;</span>
+                        {brand.bio
+                            ? brand.bio.split(brand.brandName).map((part, i) => (
+                                <Fragment key={i}>
+                                    {i > 0 && (
+                                        <span className="whitespace-nowrap bg-gradient-to-t from-brand/50 from-40% to-transparent to-40% font-semibold text-foreground">
+                                            {brand.brandName}
+                                        </span>
+                                    )}
+                                    {part}
+                                </Fragment>
+                            ))
+                            : <span className="font-semibold text-foreground">{brand.brandName}</span>}
+                    </h1>
+
+                    {/* The numbers, big and airy */}
+                    <dl className="mt-auto grid grid-cols-1 gap-6 pt-8 sm:grid-cols-3">
+                        <div>
+                            <dd className="font-display text-5xl font-light leading-none tracking-tight tabular-nums">{campaignCount}</dd>
+                            <dt className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                <Megaphone className="h-3.5 w-3.5" /> Campaigns
+                            </dt>
                         </div>
-                        <div className="min-w-0 pb-0.5">
-                            <h1 className="truncate font-display text-3xl font-semibold tracking-tight animate-slide-in-left [animation-delay:120ms]">{brand.brandName}</h1>
-                            <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-slide-in-left [animation-delay:200ms]">
-                                {isCurrentBrand && (
-                                    <span className="flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-bold">
-                                        <Check className="h-3 w-3 stroke-[3]" /> Current brand
-                                    </span>
-                                )}
-                                <span className="rounded-full border border-border px-2.5 py-0.5 text-[11px] font-semibold text-foreground/70">
-                                    {isPrimaryBrand ? 'Your brand' : isOwned ? 'Client brand' : 'Managed'}
+                        <div>
+                            <dd className="flex items-baseline gap-2 font-display text-5xl font-light leading-none tracking-tight tabular-nums">
+                                {activeCampaignCount}
+                                <span className="text-sm font-semibold text-muted-foreground">{livePct}%</span>
+                            </dd>
+                            <dt className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                <span className="relative flex h-1.5 w-1.5">
+                                    {activeCampaignCount > 0 && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75" />}
+                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
                                 </span>
-                                {brand.industry && (
-                                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">{brand.industry}</span>
-                                )}
-                                {location && (
-                                    <span className="flex items-center gap-1 px-1 text-[11px] text-muted-foreground"><MapPin className="h-3 w-3" />{location}</span>
-                                )}
-                            </div>
+                                Live now
+                            </dt>
                         </div>
-                    </div>
-                    {brand.bio && <p className="max-w-md text-[13px] leading-relaxed text-muted-foreground sm:text-right">{brand.bio}</p>}
+                        <div>
+                            <dd className="font-display text-5xl font-light leading-none tracking-tight tabular-nums">
+                                <span className="mr-0.5 font-sans text-2xl text-muted-foreground">₹</span>{formatCompactCurrency(totalSpent)}
+                            </dd>
+                            <dt className="mt-2 flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                                <span className="flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Spent</span>
+                                <span>of <strong className="font-semibold text-foreground">₹{formatCompactCurrency(totalBudget)}</strong></span>
+                            </dt>
+                            <svg viewBox="0 0 100 4" preserveAspectRatio="none" className="mt-2 h-1 w-full overflow-hidden rounded-full" aria-label={`${usedPct}% of budget used`}>
+                                <rect x="0" y="0" width="100" height="4" className="fill-foreground/[0.08]" />
+                                <rect x="0" y="0" width={usedPct} height="4" className="fill-brand" />
+                            </svg>
+                        </div>
+                    </dl>
                 </div>
             </section>
 
-            {/* ── Numbers: campaigns · live (the one yellow tile) · budget used, spanning two columns ── */}
-            <div className="mb-5 grid grid-cols-12 gap-4">
-                <div className="col-span-6 flex animate-fade-up flex-col justify-between gap-5 rounded-3xl border border-foreground/[0.08] bg-card p-5 shadow-card [animation-delay:60ms] lg:col-span-3">
-                    <span className="flex items-center gap-2 text-[13px] font-semibold">
-                        <span className="grid h-8 w-8 place-items-center rounded-xl bg-secondary"><Megaphone className="h-3.5 w-3.5" /></span>
-                        Campaigns
-                    </span>
-                    <div>
-                        <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">{campaignCount}</p>
-                        <p className="mt-2 text-[11px] font-medium text-muted-foreground">Created for this brand</p>
-                    </div>
-                </div>
-
-                <div className="relative col-span-6 flex animate-fade-up flex-col justify-between gap-5 overflow-hidden rounded-3xl bg-brand p-5 shadow-card [animation-delay:120ms] lg:col-span-3">
-                    <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
-                    <span className="relative flex items-center gap-2 text-[13px] font-semibold">
-                        <span className="grid h-8 w-8 place-items-center rounded-xl bg-card/70"><Rocket className="h-3.5 w-3.5" /></span>
-                        Live now
-                    </span>
-                    <div className="relative flex items-end justify-between gap-3">
-                        <div>
-                            <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">{activeCampaignCount}</p>
-                            <p className="mt-2 text-[11px] font-medium text-foreground/60">{livePct}% of campaigns</p>
-                        </div>
-                        <span className="relative grid h-11 w-11 place-items-center">
-                            <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90" aria-hidden>
-                                <circle cx="28" cy="28" r="22" fill="none" strokeWidth="6" className="stroke-foreground/10" />
-                                <circle
-                                    cx="28" cy="28" r="22" fill="none" strokeWidth="6" strokeLinecap="round"
-                                    strokeDasharray={RING_LENGTH}
-                                    strokeDashoffset={RING_LENGTH * (1 - livePct / 100)}
-                                    className="stroke-foreground transition-[stroke-dashoffset] [transition-duration:1200ms] ease-out"
-                                />
-                            </svg>
-                        </span>
-                    </div>
-                </div>
-
-                <div className="col-span-12 flex animate-fade-up flex-col justify-between gap-5 rounded-3xl border border-foreground/[0.08] bg-card p-5 shadow-card [animation-delay:180ms] lg:col-span-6">
-                    <div className="flex items-center justify-between gap-3">
-                        <span className="flex items-center gap-2 text-[13px] font-semibold">
-                            <span className="grid h-8 w-8 place-items-center rounded-xl bg-secondary"><Wallet className="h-3.5 w-3.5" /></span>
-                            Budget
-                        </span>
-                        <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold tabular-nums">{usedPct}% used</span>
-                    </div>
-                    <div>
-                        <div className="flex items-end justify-between gap-4">
-                            <div>
-                                <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">
-                                    <span className="mr-0.5 text-2xl text-muted-foreground">₹</span>{formatCompactCurrency(totalSpent)}
-                                </p>
-                                <p className="mt-2 text-[11px] font-medium text-muted-foreground">Spent so far</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="font-display text-lg font-semibold tabular-nums">₹{formatCompactCurrency(totalBudget)}</p>
-                                <p className="text-[11px] font-medium text-muted-foreground">Total budget</p>
-                            </div>
-                        </div>
-                        <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="mt-4 h-2 w-full overflow-hidden rounded-full" aria-label={`${usedPct}% of budget used`}>
-                            <rect x="0" y="0" width="100" height="8" className="fill-foreground/[0.07]" />
-                            <rect x="0" y="0" width={usedPct} height="8" className="fill-brand" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
             {/* ── Recent campaigns (left) · team and details (right) ── */}
-            <div className="grid grid-cols-12 gap-4">
-                <section className="col-span-12 animate-fade-up overflow-hidden rounded-3xl border border-foreground/[0.08] bg-card shadow-card [animation-delay:240ms] lg:col-span-7">
-                    <div className="flex items-center justify-between gap-3 px-6 pb-3 pt-5">
+            <div className="grid grid-cols-12 gap-5">
+                <section className="col-span-12 animate-fade-up overflow-hidden rounded-[28px] border border-border bg-card shadow-card [animation-delay:200ms] lg:col-span-7">
+                    <div className="flex items-end justify-between gap-3 px-6 pb-4 pt-6">
                         <div>
-                            <h3 className="font-display text-base font-semibold tracking-tight">Recent campaigns</h3>
-                            <p className="text-xs text-muted-foreground">The latest work under this brand.</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Portfolio</p>
+                            <h3 className="mt-1 font-display text-lg font-semibold tracking-tight">Recent campaigns</h3>
                         </div>
-                        <span className="rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold tabular-nums text-muted-foreground">
-                            {brand.recentCampaigns.length}
+                        <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                            {brand.recentCampaigns.length} shown
                         </span>
                     </div>
                     {brand.recentCampaigns.length === 0 ? (
-                        <div className="mx-6 mb-6 grid place-items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/10 px-6 py-10 text-center">
-                            <span className="grid h-10 w-10 place-items-center rounded-xl bg-secondary"><Megaphone className="h-4 w-4 text-muted-foreground" /></span>
+                        <div className="mx-6 mb-6 grid place-items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-10 text-center">
+                            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-brand/15 ring-1 ring-brand/40"><Megaphone className="h-4 w-4" /></span>
                             <p className="text-sm font-semibold">No campaigns yet</p>
                             <p className="text-xs text-muted-foreground">Campaigns created for this brand will show up here.</p>
                         </div>
                     ) : (
-                        <ul className="px-3 pb-3">
+                        <ul className="border-t border-border">
                             {brand.recentCampaigns.map((campaign, i) => (
-                                <li
-                                    key={campaign.id}
-                                    className={cn('flex animate-fade-up items-center gap-3 rounded-2xl px-3 py-3 transition-colors hover:bg-secondary/60', ROW_DELAYS[Math.min(i, ROW_DELAYS.length - 1)])}
-                                >
-                                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 font-display text-sm font-bold">
-                                        {campaign.name.charAt(0).toUpperCase()}
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-semibold">{campaign.name}</p>
-                                        <p className="text-[11px] text-muted-foreground">
-                                            Created {new Date(campaign.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                        </p>
-                                    </div>
-                                    <p className="hidden font-display text-sm font-semibold tabular-nums sm:block">₹{formatCompactCurrency(campaign.budgetTotal)}</p>
-                                    <StatusBadge status={campaign.status as ComponentProps<typeof StatusBadge>['status']} />
+                                <li key={campaign.id} className={cn('animate-fade-up border-b border-border last:border-0', ROW_DELAYS[Math.min(i, ROW_DELAYS.length - 1)])}>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                                        className="group/row relative flex w-full items-center gap-4 px-6 py-3.5 text-left transition-colors hover:bg-brand/[0.05]"
+                                    >
+                                        <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] scale-y-0 rounded-r-full bg-brand transition-transform duration-300 group-hover/row:scale-y-100" />
+                                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-secondary font-display text-sm font-bold transition-colors group-hover/row:bg-brand">
+                                            {campaign.name.charAt(0).toUpperCase()}
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-sm font-semibold">{campaign.name}</span>
+                                            <span className="block text-[11px] text-muted-foreground">
+                                                Created {new Date(campaign.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </span>
+                                        </span>
+                                        <span className="hidden text-right sm:block">
+                                            <span className="block font-display text-sm font-semibold tabular-nums">₹{formatCompactCurrency(campaign.budgetTotal)}</span>
+                                            <span className="block text-[10px] text-muted-foreground">Budget</span>
+                                        </span>
+                                        <StatusBadge status={campaign.status as ComponentProps<typeof StatusBadge>['status']} />
+                                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover/row:translate-x-0.5 group-hover/row:text-foreground" />
+                                    </button>
                                 </li>
                             ))}
                         </ul>
                     )}
                 </section>
 
-                <div className="col-span-12 flex flex-col gap-4 lg:col-span-5">
+                <div className="col-span-12 flex flex-col gap-5 lg:col-span-5">
                     {/* One Team section — team members granted access to this brand. Owner-only:
                         a team member viewing a brand assigned to them doesn't manage the team. */}
                     {isOwned && (
-                        <section className="animate-fade-up overflow-hidden rounded-3xl border border-foreground/[0.08] bg-card shadow-card [animation-delay:300ms]">
-                            <div className="flex items-center justify-between gap-3 px-6 pb-3 pt-5">
+                        <section className="animate-fade-up overflow-hidden rounded-[28px] border border-border bg-card shadow-card [animation-delay:260ms]">
+                            <div className="flex items-end justify-between gap-3 px-6 pb-4 pt-6">
                                 <div>
-                                    <h3 className="font-display text-base font-semibold tracking-tight">Team</h3>
-                                    <p className="text-xs text-muted-foreground">
-                                        {teamCount} {teamCount === 1 ? 'person' : 'people'} with access to this brand
-                                    </p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Access</p>
+                                    <h3 className="mt-1 font-display text-lg font-semibold tracking-tight">Team</h3>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={handleAddTeam}
-                                    className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold shadow-sm transition-colors hover:border-transparent hover:bg-brand"
+                                    className="group/add flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-foreground pl-1 pr-3.5 text-xs font-semibold text-background transition-shadow hover:shadow-float"
                                 >
-                                    <UserPlus className="h-3.5 w-3.5" />
-                                    Add
+                                    <span className="grid h-7 w-7 place-items-center rounded-full bg-brand text-black transition-transform duration-300 group-hover/add:rotate-90">
+                                        <Plus className="h-3.5 w-3.5" />
+                                    </span>
+                                    Add member
                                 </button>
                             </div>
                             {teamCount === 0 ? (
-                                <div className="mx-6 mb-6 grid place-items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/10 px-6 py-8 text-center">
-                                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-secondary"><UserPlus className="h-4 w-4 text-muted-foreground" /></span>
+                                <div className="mx-6 mb-6 grid place-items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-8 text-center">
+                                    <span className="grid h-10 w-10 place-items-center rounded-2xl bg-brand/15 ring-1 ring-brand/40"><UserPlus className="h-4 w-4" /></span>
                                     <p className="text-sm font-semibold">No team members yet</p>
                                     <p className="text-xs text-muted-foreground">You manage this brand directly.</p>
                                 </div>
                             ) : (
-                                <div className="px-3 pb-3">
+                                <div className="border-t border-border px-3 py-2">
                                     {teamMembers.map((manager) => (
                                         <ManagerRow
                                             key={manager.id}
@@ -451,22 +454,26 @@ export default function BrandDetailPage() {
                         </section>
                     )}
 
-                    <section className="animate-fade-up rounded-3xl border border-foreground/[0.08] bg-card p-6 shadow-card [animation-delay:360ms]">
-                        <h3 className="font-display text-base font-semibold tracking-tight">Brand details</h3>
-                        <dl className="mt-4 space-y-3">
+                    <section className="animate-fade-up overflow-hidden rounded-[28px] border border-border bg-card shadow-card [animation-delay:320ms]">
+                        <div className="px-6 pb-4 pt-6">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">About</p>
+                            <h3 className="mt-1 font-display text-lg font-semibold tracking-tight">Brand details</h3>
+                        </div>
+                        <dl className="border-t border-border">
                             {details.map((item) => (
-                                <div key={item.label} className="flex items-center gap-3">
-                                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-secondary"><item.icon className="h-3.5 w-3.5 text-muted-foreground" /></span>
-                                    <div className="min-w-0">
-                                        <dt className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{item.label}</dt>
-                                        <dd className="truncate text-[13px] font-medium">
-                                            {item.href ? (
-                                                <a href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="underline-offset-4 hover:underline">
-                                                    {item.value}
-                                                </a>
-                                            ) : item.value}
-                                        </dd>
-                                    </div>
+                                <div key={item.label} className="flex items-center justify-between gap-4 border-b border-border px-6 py-3 last:border-0">
+                                    <dt className="flex shrink-0 items-center gap-2.5 text-xs text-muted-foreground">
+                                        <item.icon className="h-3.5 w-3.5" />
+                                        {item.label}
+                                    </dt>
+                                    <dd className="min-w-0 truncate text-right text-[13px] font-semibold">
+                                        {item.href ? (
+                                            <a href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
+                                                {item.value}
+                                                <ArrowUpRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                            </a>
+                                        ) : item.value}
+                                    </dd>
                                 </div>
                             ))}
                         </dl>

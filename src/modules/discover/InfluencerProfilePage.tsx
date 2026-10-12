@@ -108,17 +108,31 @@ const TITLE_RISE_DELAYS = ['[animation-delay:150ms]', '[animation-delay:240ms]',
 
 const displayWebsite = (url: string) => url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
 
-/** One metric in the hero's bottom row: icon tile, label, value (the hint shows on hover). */
+/**
+ * One metric in the hero's bottom row: icon bead, label, value. On hover the tile stays white while
+ * a soft yellow glow blooms behind the bead, the bead fills yellow with a small tilt and a pulse
+ * ring, the label rolls over to its hint, and a yellow line draws in along the bottom.
+ */
 function StatTile({ icon: Icon, label, value, hint, className }: { icon: typeof Users; label: string; value: string; hint?: string; className?: string }) {
     const missing = value === '—';
     return (
-        <div className={cn('group/stat flex min-w-0 animate-fade-up items-center gap-2.5 bg-card px-3.5 py-2.5 transition-colors duration-300 hover:bg-secondary/40', className)} title={hint}>
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-foreground text-brand transition-transform duration-300 group-hover/stat:-rotate-6 group-hover/stat:scale-110">
-                <Icon className="h-3.5 w-3.5" />
+        <div className={cn('group/stat relative flex min-w-0 animate-fade-up items-center gap-3 overflow-hidden bg-card px-4 py-3', className)}>
+            <span aria-hidden className="pointer-events-none absolute -left-6 top-1/2 h-24 w-24 -translate-y-1/2 scale-50 rounded-full bg-brand/30 opacity-0 blur-2xl transition-all duration-500 group-hover/stat:scale-100 group-hover/stat:opacity-100" />
+            <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 bg-brand transition-transform duration-500 ease-out group-hover/stat:scale-x-100" />
+
+            <span className="relative grid h-9 w-9 shrink-0 place-items-center">
+                <span aria-hidden className="absolute inset-0 rounded-full ring-2 ring-brand/60 opacity-0 group-hover/stat:animate-ping group-hover/stat:opacity-100 [animation-iteration-count:1]" />
+                <span className="relative grid h-9 w-9 place-items-center rounded-full bg-brand/15 text-foreground ring-1 ring-brand/40 transition-all duration-300 group-hover/stat:-rotate-12 group-hover/stat:scale-110 group-hover/stat:bg-brand group-hover/stat:shadow-[0_6px_16px_-6px_rgb(250_203_3_/_0.9)]">
+                    <Icon className="h-3.5 w-3.5" />
+                </span>
             </span>
-            <span className="min-w-0">
-                <span className="block truncate text-[11px] font-medium text-muted-foreground">{label}</span>
-                <span className={cn('mt-0.5 block truncate font-display text-lg font-semibold leading-tight tracking-tight tabular-nums', missing && 'text-muted-foreground/40')}>
+            <span className="relative min-w-0 flex-1">
+                {/* Label rolls up and the hint rolls in. */}
+                <span className="relative block h-4 overflow-hidden text-[11px] font-medium">
+                    <span className="block truncate text-muted-foreground transition-transform duration-300 group-hover/stat:-translate-y-full">{label}</span>
+                    <span className="absolute inset-x-0 top-0 block translate-y-full truncate text-foreground/80 transition-transform duration-300 group-hover/stat:translate-y-0">{hint ?? label}</span>
+                </span>
+                <span className={cn('mt-0.5 block truncate font-display text-lg font-semibold leading-tight tracking-tight tabular-nums transition-transform duration-300 group-hover/stat:translate-x-0.5', missing && 'text-muted-foreground/40')}>
                     {value}
                 </span>
             </span>
@@ -160,7 +174,7 @@ function HeroBrandFit({ fit }: { fit: BrandFitResult | null }) {
     ];
 
     return (
-        <div className="flex flex-col rounded-2xl border border-border bg-secondary/50 p-3" title="Brand Fit for your brand’s category and city">
+        <div className="flex flex-col rounded-2xl border border-border bg-card/80 p-3 shadow-sm backdrop-blur" title="Brand Fit for your brand’s category and city">
             <div className="flex items-center gap-3">
                 <div className="relative grid h-12 w-12 shrink-0 place-items-center">
                     <svg viewBox="0 0 96 96" className="absolute inset-0 -rotate-90" aria-hidden>
@@ -307,8 +321,12 @@ export default function InfluencerProfilePage() {
             {/* ── Hero: one compact white card. Identity on the left; actions above a slim Brand Fit
                 on the right; the six key numbers as the bottom row. Faint dots, a soft yellow glow. ── */}
             <section className="relative overflow-hidden rounded-[28px] border border-border bg-card shadow-card">
-                <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:linear-gradient(to_bottom,black,transparent_60%)]" />
-                <span aria-hidden className="stat-glow pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-brand/25 blur-3xl" />
+                {/* Cover band: a warm yellow wash with soft light and faint dots, fading into the card. */}
+                <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-28 overflow-hidden bg-gradient-to-br from-brand/45 via-brand/20 to-transparent">
+                    <span className="stat-glow absolute -right-16 -top-24 h-64 w-64 rounded-full bg-brand/50 blur-3xl" />
+                    <span className="absolute -left-10 top-6 h-40 w-40 rounded-full bg-white/60 blur-3xl" />
+                    <span className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-b from-transparent to-card" />
+                </div>
 
                 <div className="relative p-4 sm:p-5">
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px]">
@@ -319,15 +337,15 @@ export default function InfluencerProfilePage() {
                                     onClick={() => navigate(-1)}
                                     title="Back to Influencers"
                                     aria-label="Back to Influencers"
-                                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-card text-foreground transition-all duration-200 hover:-translate-x-0.5 hover:border-foreground"
+                                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-card/80 text-foreground shadow-sm ring-1 ring-black/5 backdrop-blur transition-all duration-200 hover:-translate-x-0.5 hover:bg-card"
                                 >
                                     <ArrowLeft className="h-4 w-4" />
                                 </button>
                                 <div className="relative w-fit shrink-0 animate-pop [animation-delay:120ms]">
-                                    <span aria-hidden className="absolute -inset-1.5 rounded-[26px] bg-brand/30 blur-xl" />
-                                    <div className="relative grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-[20px] bg-foreground font-display text-2xl font-semibold text-brand shadow-card ring-4 ring-card">
+                                    <span aria-hidden className="absolute -inset-1.5 rounded-full bg-brand/40 blur-xl" />
+                                    <div className="relative grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-brand/25 font-display text-2xl font-semibold text-foreground shadow-float ring-4 ring-card">
                                         {influencer.userAvatarUrl ? (
-                                            <ApiImage src={influencer.userAvatarUrl} alt={influencer.userName} className="h-full w-full object-cover" placeholderClassName="bg-foreground text-brand" fallbackText={initial} />
+                                            <ApiImage src={influencer.userAvatarUrl} alt={influencer.userName} className="h-full w-full object-cover" placeholderClassName="bg-brand/25 text-foreground" fallbackText={initial} />
                                         ) : initial}
                                     </div>
                                     {(influencer.isVerified || igConnected) && (
@@ -342,7 +360,7 @@ export default function InfluencerProfilePage() {
                                         Influencers <ChevronRight className="h-3 w-3" />
                                         <span className="text-foreground">Creator profile</span>
                                     </p>
-                                    <h1 className="flex flex-wrap gap-x-[0.28em] font-display text-2xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere]">
+                                    <h1 className="flex flex-wrap gap-x-[0.28em] font-display text-[28px] font-semibold leading-tight tracking-tight [overflow-wrap:anywhere]">
                                         {(influencer.userName || 'Anonymous Creator').split(' ').map((word, i) => (
                                             <span key={i} className="-mb-1.5 overflow-hidden pb-1.5">
                                                 <span className={cn('block animate-rise', TITLE_RISE_DELAYS[Math.min(i, TITLE_RISE_DELAYS.length - 1)])}>{word}</span>
@@ -408,15 +426,15 @@ export default function InfluencerProfilePage() {
                                         <span
                                             key={badgeKey}
                                             title={meta.description}
-                                            className="inline-flex cursor-help items-center gap-1.5 rounded-full bg-foreground px-2.5 py-1 text-xs font-semibold text-background"
+                                            className="inline-flex cursor-help items-center gap-1.5 rounded-full border border-brand/50 bg-brand/10 px-2.5 py-1 text-xs font-semibold text-foreground"
                                         >
-                                            <Icon className="h-3.5 w-3.5 text-brand" />
+                                            <Icon className="h-3.5 w-3.5 text-amber-600" />
                                             {meta.label}
                                         </span>
                                     );
                                 })}
                                 {(influencer.niches ?? []).map((n) => (
-                                    <span key={n} className="max-w-full rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-foreground/70 [overflow-wrap:anywhere]">
+                                    <span key={n} className="max-w-full rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground/70 [overflow-wrap:anywhere]">
                                         {n}
                                     </span>
                                 ))}
@@ -450,11 +468,11 @@ export default function InfluencerProfilePage() {
                                     className={cn(
                                         'inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold transition-all duration-200 active:scale-95 lg:flex-none',
                                         influencer.isBookmarked
-                                            ? 'bg-foreground text-background'
+                                            ? 'border border-brand/60 bg-card text-foreground shadow-sm hover:border-brand'
                                             : 'border border-border bg-card text-foreground hover:border-foreground',
                                     )}
                                 >
-                                    <Bookmark className={cn('h-4 w-4', influencer.isBookmarked && 'fill-brand text-brand')} />
+                                    <Bookmark className={cn('h-4 w-4', influencer.isBookmarked && 'fill-brand text-amber-600')} />
                                     {influencer.isBookmarked ? 'Saved' : 'Save'}
                                 </button>
                                 <ConnectButton onClick={handleConnect} disabled={!canConnect} className="flex-1 lg:flex-none">
@@ -506,7 +524,7 @@ export default function InfluencerProfilePage() {
                 {hasDemographics && (
                         <section className={cn(profileSurface, 'animate-fade-up p-4 sm:p-5 space-y-4 [animation-delay:740ms]')}>
                             <div className="flex items-center gap-3">
-                                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-foreground text-brand">
+                                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40">
                                     <Users className="h-[18px] w-[18px]" />
                                 </span>
                                 <div className="min-w-0">

@@ -138,7 +138,6 @@ export function CampaignCard({ campaign, listSearch, className }: CampaignCardPr
                     />
                 ) : (
                     <span className="relative block h-full w-full overflow-hidden">
-                        <span aria-hidden className="absolute inset-0 opacity-[0.08] [background-image:radial-gradient(rgb(255_255_255)_1px,transparent_1px)] [background-size:14px_14px]" />
                         <TypeIcon aria-hidden className="absolute -bottom-5 -right-3 h-28 w-28 -rotate-12 text-brand/25 transition-transform duration-700 group-hover:-rotate-6 group-hover:scale-105" strokeWidth={1.25} />
                     </span>
                 )}

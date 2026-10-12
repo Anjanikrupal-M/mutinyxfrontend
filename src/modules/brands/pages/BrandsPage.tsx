@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Archive, ArchiveRestore, ArrowRightLeft, ArrowUpRight, Building2, Check, Loader2, Megaphone, MoreHorizontal, Plus, Rocket, Search, Sparkles, Trash2, Wallet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/shared/components/PageHeader';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { PageExplainer } from '@/shared/components/PageExplainer';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Button } from '@/shared/ui/button';
@@ -13,7 +14,6 @@ import { getBrandRoleLabel, useSwitchBrand } from '@/shared/hooks/useBrandProfil
 import { useIsAgencyOwner } from '@/shared/hooks/useIsAgencyOwner';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { useAgencyOverview } from '../hooks/useAgencyOverview';
-import { coverTint } from '../components/brandCover';
 import { useDeactivatedBrands, useDeactivateBrand, useReactivateBrand } from '../hooks/useBrandLifecycle';
 import {
     DropdownMenu,
@@ -34,24 +34,6 @@ const statTile = 'group flex animate-fade-up flex-col justify-between gap-5 roun
 
 type BrandFilter = 'all' | 'live' | 'idle';
 
-
-/** One bar per brand (up to 7); the tallest is yellow. Heights are SVG attributes, not inline styles. */
-function BrandBars({ values, label }: { values: { id: string; name: string; value: number }[]; label: string }) {
-    const max = Math.max(0, ...values.map((v) => v.value));
-    return (
-        <svg viewBox="0 0 76 44" className="h-11 w-[68px]" aria-label={label}>
-            {values.slice(0, 7).map((v, i) => {
-                const h = max > 0 ? Math.max(4, (v.value / max) * 42) : 4;
-                const isTop = max > 0 && v.value === max;
-                return (
-                    <rect key={v.id} x={i * 11} y={44 - h} width="7" height={h} rx="2" className={v.value === 0 ? 'fill-foreground/10' : isTop ? 'fill-brand' : 'fill-foreground/70'}>
-                        <title>{`${v.name}: ${v.value}`}</title>
-                    </rect>
-                );
-            })}
-        </svg>
-    );
-}
 
 /** Thin stacked bar: each brand's share of total spend, biggest first in yellow. */
 function SpendShare({ values }: { values: { id: string; name: string; value: number }[] }) {
@@ -221,109 +203,87 @@ export default function BrandsPage() {
             />
 
             {isLoading || !data ? (
-                <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-12 h-[220px] animate-pulse rounded-3xl bg-secondary/60 lg:col-span-5" />
-                    <div className="col-span-12 h-[220px] animate-pulse rounded-3xl bg-secondary/60 lg:col-span-7" />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {[0, 1, 2, 3].map((i) => <div key={i} className="h-[200px] animate-pulse rounded-3xl bg-secondary/60" />)}
                 </div>
             ) : (
                 <>
                     {/* ── Bento: the brand you're in (spotlight) beside three numbers, each with its own visual ── */}
-                    <div className="mb-8 grid grid-cols-12 gap-4">
-                        <section className="group relative col-span-12 flex animate-fade-up flex-col overflow-hidden rounded-3xl border border-foreground/[0.08] bg-card shadow-card lg:col-span-5">
-                            <div className={cn('relative h-24 overflow-hidden bg-gradient-to-br', currentBrand ? coverTint(currentBrand.id) : 'from-brand/30 to-brand/5')}>
-                                {currentBrand?.brandLogoUrl && (
-                                    <ApiImage src={currentBrand.brandLogoUrl} alt="" className="absolute inset-0 h-full w-full scale-150 object-cover opacity-40 blur-3xl saturate-150" fallbackText="" />
-                                )}
-                                <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:16px_16px]" />
-                                <span className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-card/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] shadow-sm backdrop-blur">
-                                    <span className="relative flex h-1.5 w-1.5">
-                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75" />
-                                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
-                                    </span>
-                                    You're working in
-                                </span>
-                                <span className="absolute right-4 top-4 rounded-full bg-card/85 px-2.5 py-1 text-[11px] font-semibold tabular-nums shadow-sm backdrop-blur">
-                                    {data.totals.brandCount} {data.totals.brandCount === 1 ? 'brand' : 'brands'}
-                                </span>
-                            </div>
-
-                            <div className="relative flex flex-1 flex-col gap-4 px-5 pb-5">
-                                <div className="-mt-8 flex items-end gap-3">
-                                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-secondary shadow-float ring-4 ring-card">
-                                        {currentBrand ? (
-                                            <ApiImage src={currentBrand.brandLogoUrl} alt={currentBrand.brandName} className="h-full w-full object-cover" fallbackText={currentBrand.brandName.charAt(0)} />
-                                        ) : (
-                                            <span className="grid h-full w-full place-items-center"><Building2 className="h-6 w-6 text-muted-foreground" /></span>
-                                        )}
-                                    </div>
-                                    <div className="min-w-0 pb-1">
-                                        <p className="truncate font-display text-xl font-semibold tracking-tight">{currentBrand?.brandName ?? 'No brand selected'}</p>
-                                        <p className="truncate text-xs text-muted-foreground">{currentBrand?.industry || 'Switch into a brand below'}</p>
-                                    </div>
+                    <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {/* The brand you're working in — the same white tile as the three numbers beside it:
+                            icon and label, the brand itself, and one footer line. */}
+                        <section className={cn(statTile, 'border border-foreground/[0.08] bg-card')}>
+                            <span className="flex items-center gap-2 text-[13px] font-semibold">
+                                <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40"><Building2 className="h-3.5 w-3.5" /></span>
+                                Working in
+                            </span>
+                            <div className="flex min-w-0 items-center gap-3">
+                                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-secondary">
+                                    {currentBrand ? (
+                                        <ApiImage src={currentBrand.brandLogoUrl} alt={currentBrand.brandName} className="h-full w-full object-cover" fallbackText={currentBrand.brandName.charAt(0)} />
+                                    ) : (
+                                        <span className="grid h-full w-full place-items-center"><Building2 className="h-5 w-5 text-muted-foreground" /></span>
+                                    )}
                                 </div>
-
+                            </div>
+                            <div className="flex items-center gap-2 rounded-xl bg-brand/10 px-3 py-2 text-xs font-medium text-foreground/80 justify-between">
+                                <span className="flex min-w-0 items-center gap-2"><span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" /><span className="truncate">{currentBrand?.industry || 'Switch into a brand below'}</span></span>
                                 {currentBrand && (
-                                    <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
-                                        <div className="flex items-center gap-4 text-xs">
-                                            <span><strong className="font-display text-base font-semibold tabular-nums">{currentBrand.campaignCount}</strong> <span className="text-muted-foreground">campaigns</span></span>
-                                            <span><strong className="font-display text-base font-semibold tabular-nums">{currentBrand.activeCampaignCount}</strong> <span className="text-muted-foreground">live</span></span>
-                                        </div>
-                                        <button type="button" onClick={() => navigate(`/brands/${currentBrand.id}`)} className={cn(softPill, 'group/open')}>
-                                            Open brand
-                                            <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/open:-translate-y-px group-hover/open:translate-x-px" />
-                                        </button>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(`/brands/${currentBrand.id}`)}
+                                        className="group/open flex shrink-0 items-center gap-1 font-semibold text-foreground underline-offset-2 hover:underline"
+                                    >
+                                        Open brand
+                                        <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/open:-translate-y-px group-hover/open:translate-x-px" />
+                                    </button>
                                 )}
                             </div>
                         </section>
 
-                        <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-span-7">
-                            {/* Campaigns — bars per brand */}
+                            {/* Campaigns — the total */}
                             <div className={cn(statTile, 'border border-foreground/[0.08] bg-card', cardDelay(1))}>
                                 <span className="flex items-center gap-2 text-[13px] font-semibold">
-                                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-secondary"><Megaphone className="h-3.5 w-3.5" /></span>
+                                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40"><Megaphone className="h-3.5 w-3.5" /></span>
                                     Campaigns
                                 </span>
-                                <div className="flex items-end justify-between gap-3">
-                                    <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">{data.totals.campaignCount}</p>
-                                    <BrandBars values={brands.map((b) => ({ id: b.id, name: b.brandName, value: b.campaignCount }))} label="Campaigns per brand" />
-                                </div>
-                                <p className="border-t border-border pt-2.5 text-[11px] font-medium text-muted-foreground">Across every brand</p>
+                                <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">{data.totals.campaignCount}</p>
+                                <p className="flex items-center gap-2 rounded-xl bg-brand/10 px-3 py-2 text-xs font-medium text-foreground/80"><span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />Across <strong className="font-semibold text-foreground">every brand</strong></p>
                             </div>
 
                             {/* Live now — same white tile as its neighbours, just the count */}
                             <div className={cn(statTile, 'border border-foreground/[0.08] bg-card', cardDelay(2))}>
                                 <span className="flex items-center gap-2 text-[13px] font-semibold">
-                                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-secondary"><Rocket className="h-3.5 w-3.5" /></span>
+                                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40"><Rocket className="h-3.5 w-3.5" /></span>
                                     Live now
                                 </span>
                                 <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">{data.totals.activeCampaignCount}</p>
-                                <p className="border-t border-border pt-2.5 text-[11px] font-medium text-muted-foreground">
-                                    {liveBrandCount} of {brands.length} brands running
+                                <p className="flex items-center gap-2 rounded-xl bg-brand/10 px-3 py-2 text-xs font-medium text-foreground/80">
+                                    <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" /><span><strong className="font-semibold text-foreground">{liveBrandCount} of {brands.length}</strong> brands running</span>
                                 </p>
                             </div>
 
                             {/* Spent — share by brand */}
                             <div className={cn(statTile, 'border border-foreground/[0.08] bg-card', cardDelay(3))}>
                                 <span className="flex items-center gap-2 text-[13px] font-semibold">
-                                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-secondary"><Wallet className="h-3.5 w-3.5" /></span>
+                                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40"><Wallet className="h-3.5 w-3.5" /></span>
                                     Spent
                                 </span>
                                 <div>
                                     <p className="font-display text-4xl font-semibold leading-none tracking-tight tabular-nums">
-                                        <span className="mr-0.5 text-2xl text-muted-foreground">₹</span>{formatCompactCurrency(totalSpentAcrossBrands)}
+                                        <span className="mr-0.5 font-sans text-2xl text-muted-foreground">₹</span>{formatCompactCurrency(totalSpentAcrossBrands)}
                                     </p>
                                     <div className="mt-3">
                                         <SpendShare values={brands.map((b) => ({ id: b.id, name: b.brandName, value: b.totalSpent || 0 }))} />
                                     </div>
                                 </div>
-                                <p className="truncate border-t border-border pt-2.5 text-[11px] font-medium text-muted-foreground">
+                                <p className="truncate flex items-center gap-2 rounded-xl bg-brand/10 px-3 py-2 text-xs font-medium text-foreground/80">
+                                    <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
                                     {topSpender && topSpender.totalSpent > 0
                                         ? <>Most by <strong className="font-semibold text-foreground">{topSpender.brandName}</strong></>
                                         : 'Nothing spent yet'}
                                 </p>
                             </div>
-                        </div>
                     </div>
 
                     {/* ── Toolbar: title · segmented filter · search ── */}
@@ -333,29 +293,16 @@ export default function BrandsPage() {
                             <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">{brands.length}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <div role="tablist" aria-label="Filter brands" className="flex h-9 items-center rounded-full border border-foreground/[0.08] bg-card p-1 shadow-sm">
-                                {([
-                                    { key: 'all', label: 'All', count: brands.length },
-                                    { key: 'live', label: 'Live', count: liveBrandCount },
-                                    { key: 'idle', label: 'Idle', count: brands.length - liveBrandCount },
-                                ] as const).map((tab) => (
-                                    <button
-                                        key={tab.key}
-                                        type="button"
-                                        role="tab"
-                                        aria-selected={filter === tab.key}
-                                        onClick={() => setFilter(tab.key)}
-                                        className={cn(
-                                            'flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-all duration-200',
-                                            filter === tab.key ? 'bg-brand text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                                        )}
-                                    >
-                                        {tab.key === 'live' && <span className={cn('h-1.5 w-1.5 rounded-full', filter === 'live' ? 'bg-foreground' : 'bg-brand')} />}
-                                        {tab.label}
-                                        <span className="tabular-nums opacity-60">{tab.count}</span>
-                                    </button>
-                                ))}
-                            </div>
+                            <SegmentedTabs<BrandFilter>
+                                ariaLabel="Filter brands"
+                                value={filter}
+                                onChange={setFilter}
+                                items={[
+                                    { value: 'all', label: 'All', count: brands.length },
+                                    { value: 'live', label: 'Live', count: liveBrandCount, dot: 'bg-emerald-500' },
+                                    { value: 'idle', label: 'Idle', count: brands.length - liveBrandCount },
+                                ]}
+                            />
                             <label className="group/search flex h-9 w-full items-center gap-2 rounded-full border border-foreground/[0.08] bg-card px-3 shadow-sm transition-colors focus-within:border-foreground/30 sm:w-56">
                                 <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-focus-within/search:text-foreground" />
                                 <input
@@ -409,42 +356,34 @@ export default function BrandsPage() {
                                         key={brand.id}
                                         onClick={() => navigate(`/brands/${brand.id}`)}
                                         className={cn(
-                                            'group relative flex animate-fade-up cursor-pointer flex-col overflow-hidden rounded-2xl bg-card shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-float',
-                                            current ? 'ring-2 ring-brand' : 'border border-foreground/[0.08] hover:border-foreground/20',
+                                            'group relative flex animate-fade-up cursor-pointer flex-col overflow-hidden rounded-[26px] bg-card p-5 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-float',
+                                            current ? 'ring-2 ring-brand' : 'border border-border hover:border-foreground/20',
                                             cardDelay(index + 4),
                                         )}
                                     >
-                                        {/* Cover: the brand's own logo, blurred over its tint */}
-                                        <div className={cn('relative h-14 overflow-hidden bg-gradient-to-br', coverTint(brand.id))}>
-                                            {brand.brandLogoUrl && (
-                                                <ApiImage
-                                                    src={brand.brandLogoUrl}
-                                                    alt=""
-                                                    className="absolute inset-0 h-full w-full scale-150 object-cover opacity-40 blur-2xl saturate-150 transition-transform duration-700 group-hover:scale-[1.7]"
-                                                    fallbackText=""
-                                                />
-                                            )}
-                                            <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:radial-gradient(rgb(0_0_0)_1px,transparent_1px)] [background-size:14px_14px]" />
+                                        {/* The brand you're in: a slim yellow line along the top edge */}
+                                        {current && <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-brand" />}
+                                        {/* Soft glow that blooms on hover */}
+                                        <span aria-hidden className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 scale-50 rounded-full bg-brand/25 opacity-0 blur-3xl transition-all duration-500 group-hover:scale-100 group-hover:opacity-100" />
 
-                                            <span
-                                                className={cn(
-                                                    'absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full bg-card/85 px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur',
-                                                    live > 0 ? 'text-foreground' : 'text-muted-foreground',
-                                                )}
-                                            >
-                                                <span className={cn('h-1.5 w-1.5 rounded-full', live > 0 ? 'animate-pulse bg-brand ring-2 ring-brand/30' : 'bg-foreground/25')} />
-                                                {live > 0 ? `${live} live` : 'Idle'}
-                                            </span>
-
+                                        {/* Header: logo, name and industry; the menu on the right */}
+                                        <div className="relative flex items-start gap-3">
+                                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-secondary shadow-sm ring-1 ring-border transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-105">
+                                                <ApiImage src={brand.brandLogoUrl} alt={brand.brandName} className="h-full w-full object-cover" fallbackText={brand.brandName.charAt(0)} />
+                                            </div>
+                                            <div className="min-w-0 flex-1 pt-0.5">
+                                                <p className="truncate font-display text-base font-semibold tracking-tight">{brand.brandName}</p>
+                                                <p className="truncate text-xs text-muted-foreground">{brand.industry || 'No industry set'}</p>
+                                            </div>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <button
                                                         type="button"
                                                         onClick={(e) => e.stopPropagation()}
                                                         aria-label={`More actions for ${brand.brandName}`}
-                                                        className="absolute right-2.5 top-2.5 grid h-6 w-6 place-items-center rounded-full bg-card/85 text-foreground/70 shadow-sm backdrop-blur transition-colors hover:bg-card hover:text-foreground"
+                                                        className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-foreground/70 transition-colors hover:border-foreground hover:text-foreground"
                                                     >
-                                                        <MoreHorizontal className="h-3.5 w-3.5" />
+                                                        <MoreHorizontal className="h-4 w-4" />
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-44">
@@ -476,71 +415,79 @@ export default function BrandsPage() {
                                             </DropdownMenu>
                                         </div>
 
-                                        <div className="relative flex flex-1 flex-col gap-2.5 px-4 pb-3.5">
-                                            <div className="-mt-5 flex items-end gap-2.5">
-                                                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-secondary shadow-card ring-[3px] ring-card transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-105">
-                                                    <ApiImage src={brand.brandLogoUrl} alt={brand.brandName} className="h-full w-full object-cover" fallbackText={brand.brandName.charAt(0)} />
-                                                </div>
-                                                {current && (
-                                                    <span className="mb-0.5 flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold">
-                                                        <Check className="h-2.5 w-2.5 stroke-[3]" /> Current
-                                                    </span>
+                                        {/* Tags: role, live status, current */}
+                                        <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
+                                            <span
+                                                className={cn(
+                                                    'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                                                    isPrimaryBrand ? 'bg-brand/20 text-foreground' : 'border border-border text-foreground/70',
                                                 )}
-                                            </div>
-
-                                            <div className="min-w-0">
-                                                <p className="truncate font-display text-sm font-semibold tracking-tight">{brand.brandName}</p>
-                                                <div className="mt-0.5 flex items-center gap-1.5">
-                                                    <span
-                                                        className={cn(
-                                                            'shrink-0 rounded-full px-2 py-px text-[10px] font-semibold',
-                                                            brand.relation === 'managed' ? 'bg-secondary text-foreground/70' : isPrimaryBrand ? 'bg-brand/25 text-foreground' : 'border border-border text-foreground/70',
-                                                        )}
-                                                    >
-                                                        {getBrandRoleLabel(brand, brandIndex)}
-                                                    </span>
-                                                    {brand.industry && <span className="truncate text-[11px] text-muted-foreground">{brand.industry}</span>}
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <div className="flex items-baseline justify-between gap-2">
-                                                    <p className="font-display text-lg font-semibold tabular-nums">
-                                                        <span className="mr-0.5 text-xs text-muted-foreground">₹</span>{formatCompactCurrency(brand.totalSpent)}
-                                                        <span className="ml-1 font-sans text-[11px] font-medium text-muted-foreground">spent</span>
-                                                    </p>
-                                                    <p className="text-[11px] font-medium tabular-nums text-muted-foreground">
-                                                        <strong className="font-semibold text-foreground">{live}</strong>/{brand.campaignCount} live
-                                                    </p>
-                                                </div>
-                                                <svg viewBox="0 0 100 4" preserveAspectRatio="none" className="mt-1.5 h-1 w-full overflow-hidden rounded-full" aria-label={`${live} of ${brand.campaignCount} campaigns live`}>
-                                                    <rect x="0" y="0" width="100" height="4" className="fill-foreground/[0.07]" />
-                                                    <rect x="0" y="0" width={liveShare * 100} height="4" className="fill-brand" />
-                                                </svg>
-                                            </div>
-
-                                            <div className="mt-auto grid grid-cols-2 gap-2 pt-0.5">
-                                                {current ? (
-                                                    <span className="flex h-7 items-center justify-center gap-1.5 rounded-full bg-brand/15 text-[11px] font-semibold">
-                                                        <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-                                                        Working here
-                                                    </span>
-                                                ) : (
-                                                    <button
-                                                        type="button"
-                                                        disabled={isThisOneSwitching}
-                                                        onClick={(e) => { e.stopPropagation(); switchTo(brand.id); }}
-                                                        className={cn(softPill, 'h-7 justify-center')}
-                                                    >
-                                                        {isThisOneSwitching ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRightLeft className="h-3 w-3" />}
-                                                        {isThisOneSwitching ? 'Switching…' : 'Switch'}
-                                                    </button>
-                                                )}
-                                                <span className="flex h-7 items-center justify-center gap-1 rounded-full bg-secondary text-[11px] font-semibold transition-colors duration-200 group-hover:bg-foreground group-hover:text-background">
-                                                    Open
-                                                    <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px" />
+                                            >
+                                                {getBrandRoleLabel(brand, brandIndex)}
+                                            </span>
+                                            <span className={cn('flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold', live > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-secondary text-muted-foreground')}>
+                                                <span className="relative flex h-1.5 w-1.5">
+                                                    {live > 0 && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
+                                                    <span className={cn('relative inline-flex h-1.5 w-1.5 rounded-full', live > 0 ? 'bg-emerald-500' : 'bg-foreground/30')} />
                                                 </span>
+                                                {live > 0 ? `${live} live` : 'Idle'}
+                                            </span>
+                                            {current && (
+                                                <span className="flex items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-bold text-brand">
+                                                    <Check className="h-2.5 w-2.5 stroke-[3]" /> Current
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Numbers: spent, and live as pips (one per campaign, up to 12) */}
+                                        <div className="relative mt-4 grid grid-cols-2 divide-x divide-border rounded-2xl border border-border">
+                                            <div className="px-3.5 py-2.5">
+                                                <p className="text-[10px] font-medium text-muted-foreground">Spent</p>
+                                                <p className="font-display text-lg font-semibold tabular-nums">
+                                                    <span className="mr-0.5 font-sans text-xs text-muted-foreground">₹</span>{formatCompactCurrency(brand.totalSpent)}
+                                                </p>
                                             </div>
+                                            <div className="px-3.5 py-2.5">
+                                                <p className="text-[10px] font-medium text-muted-foreground">Live</p>
+                                                <p className="font-display text-lg font-semibold tabular-nums">
+                                                    {live}<span className="font-sans text-xs font-medium text-muted-foreground"> / {brand.campaignCount}</span>
+                                                </p>
+                                                <div className="mt-1 flex h-1 gap-0.5" aria-label={`${live} of ${brand.campaignCount} campaigns live`}>
+                                                    {Array.from({ length: Math.min(Math.max(brand.campaignCount, 1), 12) }, (_, i) => (
+                                                        <span
+                                                            key={i}
+                                                            className={cn(
+                                                                'h-full flex-1 rounded-full',
+                                                                i < (brand.campaignCount > 12 ? Math.round(liveShare * 12) : live) ? 'bg-brand' : 'bg-foreground/[0.08]',
+                                                            )}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="relative mt-auto grid grid-cols-2 gap-2 pt-4">
+                                            {current ? (
+                                                <span className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-brand/15 text-xs font-semibold">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+                                                    Working here
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    disabled={isThisOneSwitching}
+                                                    onClick={(e) => { e.stopPropagation(); switchTo(brand.id); }}
+                                                    className="group/switch flex h-9 items-center justify-center gap-1.5 rounded-full border border-border bg-card text-xs font-semibold transition-colors hover:border-foreground disabled:opacity-60"
+                                                >
+                                                    {isThisOneSwitching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRightLeft className="h-3.5 w-3.5 transition-transform duration-300 group-hover/switch:rotate-180" />}
+                                                    {isThisOneSwitching ? 'Switching…' : 'Switch'}
+                                                </button>
+                                            )}
+                                            <span className="group/openbtn flex h-9 items-center justify-center gap-1 rounded-full bg-foreground text-xs font-semibold text-background transition-shadow hover:shadow-float">
+                                                Open
+                                                <ArrowUpRight className="h-3.5 w-3.5 text-brand transition-transform duration-200 group-hover/openbtn:-translate-y-px group-hover/openbtn:translate-x-px" />
+                                            </span>
                                         </div>
                                     </article>
                                 );
@@ -552,12 +499,12 @@ export default function BrandsPage() {
                                     type="button"
                                     onClick={() => navigate('/brands/new')}
                                     className={cn(
-                                        'group relative flex min-h-[176px] animate-fade-up flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border-2 border-dashed border-foreground/15 text-muted-foreground transition-all duration-300 hover:border-brand hover:text-foreground',
+                                        'group relative flex min-h-[220px] animate-fade-up flex-col items-center justify-center gap-2 overflow-hidden rounded-[26px] border-2 border-dashed border-foreground/15 text-muted-foreground transition-all duration-300 hover:-translate-y-1 hover:border-brand hover:text-foreground',
                                         cardDelay(visibleBrands.length + 4),
                                     )}
                                 >
                                     <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand/0 to-brand/0 transition-colors duration-300 group-hover:from-brand/[0.08] group-hover:to-transparent" />
-                                    <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-secondary transition-all duration-300 group-hover:scale-110 group-hover:bg-brand group-hover:text-foreground">
+                                    <span className="relative grid h-11 w-11 place-items-center rounded-2xl bg-brand/15 text-foreground ring-1 ring-brand/40 transition-all duration-300 group-hover:scale-110 group-hover:bg-brand">
                                         <Plus className="h-5 w-5 transition-transform duration-300 group-hover:rotate-90" />
                                     </span>
                                     <span className="relative text-sm font-semibold">Add a brand</span>

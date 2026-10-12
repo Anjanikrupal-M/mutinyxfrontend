@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { ErrorText, PickerHeader, choiceClass } from '@/shared/components/BentoUi';
 
 export interface BoardCity {
@@ -125,47 +126,16 @@ export function CityBoard({
             />
             <div className={cn('rounded-xl border bg-secondary/50 p-1.5', error ? 'border-destructive/50' : 'border-border', disabled && 'pointer-events-none opacity-60')}>
                 {/* Region tabs; a tab's badge counts the cities already picked there. */}
-                <div role="tablist" aria-label={`${label} regions`} className="flex flex-wrap items-center gap-1">
-                    {CITY_REGIONS.map(({ region: name, cities }) => {
+                <SegmentedTabs
+                    ariaLabel={`${label} regions`}
+                    value={region}
+                    onChange={setRegion}
+                    items={CITY_REGIONS.map(({ region: name, cities }) => {
                         const count = cities.filter((c) => value.includes(toValue(c))).length;
-                        const active = name === region;
-                        return (
-                            <button
-                                key={name}
-                                type="button"
-                                role="tab"
-                                aria-selected={active}
-                                onClick={() => setRegion(name)}
-                                className={cn(
-                                    'flex h-8 items-center gap-1.5 rounded-full px-3 text-xs transition-all duration-200',
-                                    active
-                                        ? 'bg-card font-semibold text-foreground shadow-sm ring-1 ring-foreground/[0.06]'
-                                        : 'font-medium text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                {name}
-                                {count > 0 && (
-                                    <span
-                                        key={count}
-                                        className="grid h-4 min-w-4 animate-pop place-items-center rounded-full bg-foreground px-1 text-[10px] font-semibold tabular-nums text-background"
-                                    >
-                                        {count}
-                                    </span>
-                                )}
-                            </button>
-                        );
+                        return { value: name, label: name, count: count > 0 ? count : undefined };
                     })}
-                    <button
-                        type="button"
-                        aria-pressed={allInRegion}
-                        onClick={() =>
-                            onChange(allInRegion ? value.filter((v) => !regionValues.includes(v)) : [...new Set([...value, ...regionValues])])
-                        }
-                        className="ml-auto h-8 rounded-full px-2.5 text-xs font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
-                    >
-                        {allInRegion ? `Remove all ${region}` : `Select all ${region}`}
-                    </button>
-                </div>
+                    className="flex-wrap"
+                />
 
                 <div key={region} role="tabpanel" className="flex animate-fade-up flex-wrap gap-1.5 px-1.5 pb-1.5 pt-2 [animation-duration:200ms]">
                     {CITY_REGIONS.find((r) => r.region === region)!.cities.map((c) => {

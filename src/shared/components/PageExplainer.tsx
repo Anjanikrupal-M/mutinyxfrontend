@@ -70,7 +70,6 @@ export function PageExplainer({ label, description, steps, className, dismissKey
         >
             {/* Soft yellow glow and a dot grid fading out to the right */}
             <span aria-hidden className="stat-glow pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-brand/20 blur-3xl" />
-            <span aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(rgb(255_255_255)_1px,transparent_1px)] [background-size:16px_16px] [mask-image:linear-gradient(to_right,black,transparent_60%)]" />
 
             {dismissKey && (
                 <button

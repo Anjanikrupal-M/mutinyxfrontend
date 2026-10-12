@@ -172,7 +172,7 @@ export function PreviousWorkSection({ items, totalCampaigns, experience }: {
         <section className="rounded-[28px] border border-border bg-card p-4 shadow-card sm:p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-foreground text-brand">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/15 text-foreground ring-1 ring-brand/40">
                         <Briefcase className="w-5 h-5" />
                     </span>
                     <div className="min-w-0">
@@ -215,7 +215,7 @@ export function PreviousWorkSection({ items, totalCampaigns, experience }: {
             ) : (
                 // Empty state: a dashed tile with a black icon badge, same language as the list pages.
                 <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-secondary/30 px-4 py-9 text-center">
-                    <span className="relative grid h-11 w-11 place-items-center rounded-2xl bg-foreground text-brand">
+                    <span className="relative grid h-11 w-11 place-items-center rounded-2xl bg-brand/15 text-foreground ring-1 ring-brand/40">
                         <Briefcase className="h-5 w-5" />
                         <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand ring-4 ring-card" />
                     </span>

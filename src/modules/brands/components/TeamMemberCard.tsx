@@ -28,7 +28,7 @@ interface TeamMemberCardProps {
     className?: string;
 }
 
-/** One roster card on the Teams page. The whole card opens the member's detail page. */
+/** One roster card on the Teams page — compact. The whole card opens the member's detail page. */
 export function TeamMemberCard({ member, showBrands, onOpen, className }: TeamMemberCardProps) {
     const joined = formatDistanceToNowStrict(new Date(member.createdAt), { addSuffix: true });
     const isNew = Date.now() - new Date(member.createdAt).getTime() < 14 * 86_400_000;
@@ -38,17 +38,18 @@ export function TeamMemberCard({ member, showBrands, onOpen, className }: TeamMe
             type="button"
             onClick={onOpen}
             className={cn(
-                'group relative flex w-full animate-fade-up flex-col overflow-hidden rounded-3xl border border-border bg-card p-5 text-left shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-float focus-visible:outline-none',
+                'group relative isolate flex w-full animate-fade-up flex-col overflow-hidden rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                 className,
             )}
         >
-            {/* Accent bar that draws in on hover */}
-            <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-brand transition-transform duration-500 ease-out group-hover:scale-x-100" />
+            {/* Hover: a soft yellow glow blooms in the top corner */}
+            <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 -z-10 h-32 w-32 scale-50 rounded-full bg-brand/30 opacity-0 blur-3xl transition-all duration-500 group-hover:scale-100 group-hover:opacity-100" />
 
-            <div className="flex items-start justify-between gap-3">
+            {/* Avatar, name and status on one row; the open arrow on the right */}
+            <div className="flex items-center gap-3">
                 <span className="relative shrink-0">
                     <span className={cn(
-                        'grid h-12 w-12 place-items-center rounded-2xl font-display text-sm font-bold tracking-wide transition-transform duration-300 group-hover:scale-105',
+                        'grid h-10 w-10 place-items-center rounded-xl font-display text-xs font-bold tracking-wide transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105',
                         avatarTone(member.id),
                         !member.isActive && 'opacity-50 grayscale',
                     )}>
@@ -57,62 +58,57 @@ export function TeamMemberCard({ member, showBrands, onOpen, className }: TeamMe
                     <span
                         aria-hidden
                         className={cn(
-                            'absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[2.5px] border-card',
+                            'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card',
                             member.isActive ? 'bg-success' : 'bg-muted-foreground/40',
                         )}
                     />
                 </span>
-
-                <span className="flex items-center gap-1.5">
-                    {isNew && member.isActive && (
-                        <span className="rounded-full border border-brand/50 bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
-                            New
+                <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                        <span className={cn('truncate font-display text-sm font-semibold tracking-tight', !member.isActive && 'text-muted-foreground')}>
+                            {member.name}
                         </span>
-                    )}
-                    <span className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground transition-all duration-300 group-hover:border-foreground group-hover:bg-foreground group-hover:text-background">
-                        <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-45" />
+                        {isNew && member.isActive && (
+                            <span className="shrink-0 rounded-full bg-brand/20 px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.08em]">New</span>
+                        )}
                     </span>
+                    <span className="block text-[11px] text-muted-foreground">{member.isActive ? 'Active · Team member' : 'Deactivated'}</span>
+                </span>
+                <span className="relative grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-all duration-300 group-hover:border-brand group-hover:bg-brand group-hover:text-black">
+                    <ArrowUpRight className="h-3 w-3 transition-transform duration-300 group-hover:rotate-45" />
                 </span>
             </div>
 
-            <div className="mt-4 min-w-0">
-                <p className={cn('truncate font-display text-base font-semibold tracking-tight', !member.isActive && 'text-muted-foreground')}>
-                    {member.name}
-                </p>
-                <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className={cn('h-1.5 w-1.5 rounded-full', member.isActive ? 'bg-success' : 'bg-muted-foreground/40')} />
-                    {member.isActive ? 'Active · Team member' : 'Deactivated'}
-                </p>
-            </div>
-
-            <div className="mt-4 space-y-1.5 rounded-2xl bg-secondary/60 p-3 text-xs">
+            <div className="mb-3 mt-3 space-y-1 text-[11px]">
                 <p className="flex min-w-0 items-center gap-2 text-foreground/80">
-                    <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
                     <span className="truncate">{member.email}</span>
                 </p>
                 <p className="flex min-w-0 items-center gap-2 text-foreground/80">
-                    <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
                     <span className={cn('truncate', !member.phoneNumber && 'text-muted-foreground/70')}>
                         {member.phoneNumber || 'No phone added'}
                     </span>
                 </p>
             </div>
 
-            {/* Which brands this member manages — meaningful for agencies with several brands. */}
-            {showBrands && member.brands.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1">
-                    {member.brands.map((b) => (
-                        <span key={b.id} className="rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-medium text-foreground">
-                            {b.brandName}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            <p className="mt-auto flex items-center gap-1.5 pt-4 text-[11px] font-medium text-muted-foreground">
-                <CalendarDays className="h-3 w-3" />
-                Joined {joined}
-            </p>
+            {/* Footer: the brands this member manages (agencies), then when they joined */}
+            <div className="mt-auto flex items-center gap-2 border-t border-dashed border-border pt-2.5 text-[10px] text-muted-foreground">
+                {showBrands && member.brands.length > 0 && (
+                    <span className="flex min-w-0 items-center gap-1">
+                        <span className="truncate rounded-full border border-border px-1.5 py-px font-medium text-foreground">{member.brands[0].brandName}</span>
+                        {member.brands.length > 1 && (
+                            <span className="shrink-0 rounded-full bg-secondary px-1.5 py-px font-semibold" title={member.brands.slice(1).map((b) => b.brandName).join(', ')}>
+                                +{member.brands.length - 1}
+                            </span>
+                        )}
+                    </span>
+                )}
+                <span className="ml-auto flex shrink-0 items-center gap-1 font-medium">
+                    <CalendarDays className="h-3 w-3" />
+                    {joined}
+                </span>
+            </div>
         </button>
     );
 }
