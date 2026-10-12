@@ -383,7 +383,7 @@ export function Topbar({ variant = 'default' }: TopbarProps) {
                 >
                     <Bell className="h-[17px] w-[17px] stroke-[1.75]" />
                     {unreadCount > 0 && (
-                        <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-foreground px-0.5 text-[8px] font-bold text-background ring-2 ring-background">
+<span className="absolute -right-1 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-brand px-1 text-[9px] font-bold leading-none tabular-nums text-black shadow-sm ring-2 ring-white">
                             {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                     )}
@@ -456,12 +456,13 @@ export function Topbar({ variant = 'default' }: TopbarProps) {
                 {/* Notification bell */}
                 <Link
                     to="/notifications"
-                    className="bell-btn relative p-2 rounded-lg text-foreground/70 transition-all duration-300 hover:text-foreground hover:bg-foreground/10"
+                    aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+                    className="bell-btn relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border bg-card text-foreground/80 shadow-sm transition-all duration-300 hover:border-foreground hover:text-foreground"
                 >
-                    <Bell className="w-[18px] h-[18px]" />
+                    <Bell className="h-[17px] w-[17px] stroke-[1.75]" />
+                    {/* A small yellow count tucked on the button's edge — it marks the bell, it doesn't cover it. */}
                     {unreadCount > 0 && (
-                        // Black on the yellow bar (a yellow badge would vanish into it).
-                        <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-foreground text-[10px] font-bold text-brand flex items-center justify-center">
+                        <span className="absolute -right-1 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-brand px-1 text-[9px] font-bold leading-none tabular-nums text-black shadow-sm ring-2 ring-white">
                             {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                     )}
@@ -470,38 +471,49 @@ export function Topbar({ variant = 'default' }: TopbarProps) {
                 {/* Profile menu trigger: a pill holding the brand's avatar (ringed in brand yellow) and the brand
                     and user names. Hover is deliberately quiet: the border darkens and the avatar grows a touch. */}
                 <div className="relative" ref={dropdownRef}>
+                    {/* Profile pill: a hairline border that turns into a yellow gradient on hover (with a
+                        light sweep across), the avatar in its yellow ring with an online dot, then the brand
+                        and the person — with their role as a small tag. */}
                     <button
                         type="button"
                         aria-haspopup="menu"
                         aria-expanded={isDropdownOpen}
                         onClick={() => { setIsDropdownOpen((o) => { if (o) setShowLogoutConfirm(false); return !o; }); }}
                         className={cn(
-                            'group flex h-11 min-w-0 items-center gap-3 rounded-full border bg-card p-1.5 text-left shadow-sm transition-colors duration-200 hover:border-foreground active:scale-[0.98] md:pr-4',
-                            isDropdownOpen ? 'border-foreground' : 'border-border',
+                            'group relative isolate block h-11 overflow-hidden rounded-full p-px text-left shadow-sm transition-shadow duration-300 hover:shadow-card active:scale-[0.98]',
+                            isDropdownOpen ? 'bg-foreground' : 'bg-border',
                         )}
                     >
-                        <span className="shrink-0 transition-transform duration-200 ease-out group-hover:scale-105">
-                            {avatarSrc ? (
-                                <span className="block h-8 w-8 overflow-hidden rounded-full bg-secondary ring-2 ring-brand ring-offset-1 ring-offset-card">
-                                    <ApiImage
-                                        src={avatarSrc}
-                                        alt={user?.brandName || user?.name || 'User avatar'}
-                                        className="h-full w-full object-cover"
-                                        fallbackText={brandInitial}
-                                    />
-                                </span>
-                            ) : (
-                                <span className="grid h-8 w-8 place-items-center rounded-full bg-foreground font-display text-xs font-bold text-brand ring-2 ring-brand ring-offset-1 ring-offset-card">
-                                    {brandInitial}
-                                </span>
-                            )}
-                        </span>
-                        <span className="hidden min-w-0 md:block">
-                            <span className="block max-w-[100px] truncate font-display text-[13px] font-bold leading-4 tracking-tight lg:max-w-[140px]">
-                                {user?.brandName || 'Your Brand'}
+                        <span aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-r from-brand via-amber-300 to-brand opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                        <span className="relative flex h-full min-w-0 items-center gap-3 overflow-hidden rounded-full bg-card py-1 pl-1 pr-1 md:pr-4">
+                            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-brand/25 to-transparent transition-all duration-700 ease-out group-hover:left-[120%]" />
+                            <span className="relative shrink-0 transition-transform duration-300 ease-out group-hover:-rotate-6">
+                                {avatarSrc ? (
+                                    <span className="block h-8 w-8 overflow-hidden rounded-full bg-secondary ring-2 ring-brand ring-offset-1 ring-offset-card">
+                                        <ApiImage
+                                            src={avatarSrc}
+                                            alt={user?.brandName || user?.name || 'User avatar'}
+                                            className="h-full w-full object-cover"
+                                            fallbackText={brandInitial}
+                                        />
+                                    </span>
+                                ) : (
+                                    <span className="grid h-8 w-8 place-items-center rounded-full bg-foreground font-display text-xs font-bold text-brand ring-2 ring-brand ring-offset-1 ring-offset-card">
+                                        {brandInitial}
+                                    </span>
+                                )}
+                                <span aria-hidden className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
                             </span>
-                            <span className="block max-w-[100px] truncate text-[11px] leading-[14px] text-muted-foreground lg:max-w-[140px]">
-                                {user?.name || 'Brand Owner'}
+                            <span className="relative hidden min-w-0 md:block">
+                                <span className="block max-w-[100px] truncate font-display text-[13px] font-bold leading-4 tracking-tight lg:max-w-[140px]">
+                                    {user?.brandName || 'Your Brand'}
+                                </span>
+                                <span className="flex max-w-[100px] items-center gap-1.5 text-[11px] leading-[14px] text-muted-foreground lg:max-w-[150px]">
+                                    <span className="truncate">{user?.name || 'Brand Owner'}</span>
+                                    <span className="shrink-0 rounded-full bg-brand/20 px-1.5 text-[9px] font-semibold leading-[14px] text-foreground">
+                                        {user?.role === 'influencer' ? 'Creator' : user?.role === 'brand_owner' ? 'Owner' : 'Team'}
+                                    </span>
+                                </span>
                             </span>
                         </span>
                     </button>

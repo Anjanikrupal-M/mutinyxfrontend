@@ -350,7 +350,6 @@ export default function BrandsPage() {
                                 // The brand you're working in gets a yellow ring (`isActive` only means "not deactivated").
                                 const current = currentBrandId != null && String(brand.id) === String(currentBrandId);
                                 const live = brand.activeCampaignCount;
-                                const liveShare = brand.campaignCount > 0 ? live / brand.campaignCount : 0;
                                 return (
                                     <article
                                         key={brand.id}
@@ -439,7 +438,7 @@ export default function BrandsPage() {
                                             )}
                                         </div>
 
-                                        {/* Numbers: spent, and live as pips (one per campaign, up to 12) */}
+                                        {/* Numbers: spent and live */}
                                         <div className="relative mt-4 grid grid-cols-2 divide-x divide-border rounded-2xl border border-border">
                                             <div className="px-3.5 py-2.5">
                                                 <p className="text-[10px] font-medium text-muted-foreground">Spent</p>
@@ -452,17 +451,6 @@ export default function BrandsPage() {
                                                 <p className="font-display text-lg font-semibold tabular-nums">
                                                     {live}<span className="font-sans text-xs font-medium text-muted-foreground"> / {brand.campaignCount}</span>
                                                 </p>
-                                                <div className="mt-1 flex h-1 gap-0.5" aria-label={`${live} of ${brand.campaignCount} campaigns live`}>
-                                                    {Array.from({ length: Math.min(Math.max(brand.campaignCount, 1), 12) }, (_, i) => (
-                                                        <span
-                                                            key={i}
-                                                            className={cn(
-                                                                'h-full flex-1 rounded-full',
-                                                                i < (brand.campaignCount > 12 ? Math.round(liveShare * 12) : live) ? 'bg-brand' : 'bg-foreground/[0.08]',
-                                                            )}
-                                                        />
-                                                    ))}
-                                                </div>
                                             </div>
                                         </div>
 

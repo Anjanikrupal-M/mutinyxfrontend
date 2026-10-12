@@ -38,7 +38,8 @@ export function TeamMemberCard({ member, showBrands, onOpen, className }: TeamMe
             type="button"
             onClick={onOpen}
             className={cn(
-                'group relative isolate flex w-full animate-fade-up flex-col overflow-hidden rounded-2xl border border-border bg-card p-4 text-left shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                'group relative isolate flex w-full animate-fade-up flex-col overflow-hidden rounded-2xl border p-4 text-left shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand/50 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                member.isActive ? 'border-border bg-card' : 'border-dashed border-foreground/20 bg-secondary/40',
                 className,
             )}
         >
@@ -72,7 +73,19 @@ export function TeamMemberCard({ member, showBrands, onOpen, className }: TeamMe
                             <span className="shrink-0 rounded-full bg-brand/20 px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.08em]">New</span>
                         )}
                     </span>
-                    <span className="block text-[11px] text-muted-foreground">{member.isActive ? 'Active · Team member' : 'Deactivated'}</span>
+                    <span className="mt-0.5 flex items-center gap-1.5">
+                        <span className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                            member.isActive ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-foreground/[0.06] text-muted-foreground ring-1 ring-foreground/10',
+                        )}>
+                            <span className="relative flex h-1.5 w-1.5">
+                                {member.isActive && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />}
+                                <span className={cn('relative inline-flex h-1.5 w-1.5 rounded-full', member.isActive ? 'bg-emerald-500' : 'bg-foreground/30')} />
+                            </span>
+                            {member.isActive ? 'Active' : 'Deactivated'}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">Team member</span>
+                    </span>
                 </span>
                 <span className="relative grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-all duration-300 group-hover:border-brand group-hover:bg-brand group-hover:text-black">
                     <ArrowUpRight className="h-3 w-3 transition-transform duration-300 group-hover:rotate-45" />

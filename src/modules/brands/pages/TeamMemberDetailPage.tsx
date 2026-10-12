@@ -15,14 +15,13 @@ import {
     Plus,
     UserCog,
     Users,
+    Mail,
+    Phone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/shared/ui/button';
 import { ApiImage } from '@/shared/components/ApiImage';
-import { StatCard } from '@/shared/components/StatCard';
 import { StatusBadge } from '@/shared/components/StatusBadge';
 import { CampaignStatusBadge } from '@/modules/campaigns/components/CampaignStatusBadge';
-import { EmptyState } from '@/shared/components/EmptyState';
 import { AssignAgentModal } from '@/shared/components/AssignAgentModal';
 import { queryKeys } from '@/core/queryKeys';
 import { useIsAgencyOwner } from '@/shared/hooks/useIsAgencyOwner';
@@ -39,6 +38,7 @@ import {
 } from '../hooks/useTeam';
 import { EditTeamMemberModal } from '../components/EditTeamMemberModal';
 import { AssignWorkToMemberModal, type AssignableWorkItem } from '../components/AssignWorkToMemberModal';
+import { memberInitials } from '../components/TeamMemberCard';
 
 export default function TeamMemberDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -157,114 +157,164 @@ export default function TeamMemberDetailPage() {
         invalidateWorkload();
     };
 
-    return (
-        <div className="w-full animate-fade-in">
-            <button onClick={() => navigate('/teams')} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-premium mb-6">
-                <ChevronLeft className="w-4 h-4" /> Back to Teams
-            </button>
+    const joined = new Date(member.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const figures = [
+        { label: 'Campaigns', value: stats?.assignedCampaigns ?? 0, icon: Megaphone },
+        { label: 'Live now', value: stats?.activeCampaigns ?? 0, icon: Activity, live: (stats?.activeCampaigns ?? 0) > 0 },
+        { label: 'Programs', value: stats?.assignedPrograms ?? 0, icon: Rocket },
+        ...(isAgencyOwner ? [{ label: 'Brands', value: stats?.brandsManaged ?? 0, icon: Building2 }] : []),
+    ];
 
-            {/* Profile header */}
-            <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-lg font-semibold text-primary shrink-0">
-                    {member.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <h1 className="text-xl font-bold font-display truncate">{member.name}</h1>
+    return (
+        <div className="w-full animate-fade-in pb-10">
+            {/* ── Hero: a staff ID badge on the left (hangs from a clip, straightens on hover);
+                contact, actions and the member's workload as big airy figures on the right. ── */}
+            <section className="mb-5 grid animate-fade-up grid-cols-1 items-center gap-6 rounded-[28px] border border-border bg-card p-4 shadow-card sm:p-5 lg:grid-cols-[230px_minmax(0,1fr)]">
+                {/* Member card in brand yellow, black and white only: status, the member, and two facts. */}
+                <div className="flex items-center justify-center">
+                    <div className="group/pass relative w-full max-w-[230px] rounded-[22px] bg-brand p-4 text-black shadow-[0_20px_40px_-18px_rgb(250_203_3_/_0.9)] transition-transform duration-500 ease-out hover:-translate-y-1">
+                        <div className="flex justify-end">
+                            <span className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold">
+                                <span className="relative flex h-1.5 w-1.5">
+                                    {member.isActive && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-black opacity-60" />}
+                                    <span className={cn('relative inline-flex h-1.5 w-1.5 rounded-full', member.isActive ? 'bg-black' : 'bg-black/30')} />
+                                </span>
+                                {member.isActive ? 'Active' : 'Paused'}
+                            </span>
+                        </div>
+
                         <span className={cn(
-                            'text-xs px-2 py-0.5 rounded-full font-medium',
-                            member.isActive ? 'bg-green-500/10 text-green-600' : 'bg-muted text-muted-foreground',
+                            'mx-auto -mt-1 grid h-16 w-16 place-items-center rounded-full bg-white font-display text-xl font-bold shadow-sm transition-transform duration-300 group-hover/pass:scale-105',
+                            !member.isActive && 'opacity-60 grayscale',
                         )}>
-                            {member.isActive ? 'Active' : 'Inactive'}
+                            {memberInitials(member.name)}
+                        </span>
+                        <p className="mt-3 truncate text-center font-display text-lg font-semibold tracking-tight">{member.name}</p>
+                        <p className="text-center text-[11px] font-medium text-black/60">Team member</p>
+
+                        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-black/15 pt-3">
+                            <div className="min-w-0">
+                                <dt className="text-[10px] font-medium text-black/55">Brand</dt>
+                                <dd className="truncate text-xs font-semibold" title={member.brands.map((b) => b.brandName).join(', ')}>
+                                    {member.brands.length === 0 ? 'No brands' : member.brands.length === 1 ? member.brands[0].brandName : `${member.brands[0].brandName} +${member.brands.length - 1}`}
+                                </dd>
+                            </div>
+                            <div className="min-w-0 text-right">
+                                <dt className="text-[10px] font-medium text-black/55">Joined</dt>
+                                <dd className="truncate text-xs font-semibold">{new Date(member.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <div className="flex min-w-0 flex-col">
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/teams')}
+                            className="group/back flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                            <ChevronLeft className="h-4 w-4 transition-transform group-hover/back:-translate-x-0.5" />
+                            All team members
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setEditOpen(true)}
+                                className="group/edit flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-xs font-semibold transition-colors hover:border-foreground"
+                            >
+                                <Pencil className="h-3.5 w-3.5 transition-transform duration-300 group-hover/edit:-rotate-12" />
+                                Edit
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isSettingStatus}
+                                onClick={() => setStatus({ managerId: member.id, isActive: !member.isActive })}
+                                className={cn(
+                                    'flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-xs font-semibold transition-colors disabled:opacity-60',
+                                    member.isActive ? 'text-muted-foreground hover:border-[#E50914] hover:text-[#E50914]' : 'text-emerald-700 hover:border-emerald-500',
+                                )}
+                            >
+                                {isSettingStatus ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : member.isActive ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+                                {member.isActive ? 'Deactivate' : 'Reactivate'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <h2 className="mt-3 font-display text-xl font-semibold tracking-tight">{member.name.split(' ')[0]}'s workspace</h2>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        <a href={`mailto:${member.email}`} className="flex min-w-0 items-center gap-1.5 rounded-full border border-border px-3 py-1.5 font-medium transition-colors hover:border-foreground">
+                            <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="truncate">{member.email}</span>
+                        </a>
+                        <span className={cn('flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 font-medium', !member.phoneNumber && 'border-dashed text-muted-foreground')}>
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                            {member.phoneNumber || 'No phone added'}
                         </span>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">{member.email}</p>
-                    {member.phoneNumber && (
-                        <p className="text-sm text-muted-foreground truncate">{member.phoneNumber}</p>
-                    )}
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Joined {new Date(member.createdAt).toLocaleDateString()}</p>
-                    {isAgencyOwner && member.brands.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                            {member.brands.map((b) => (
-                                <span key={b.id} className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-secondary text-foreground border border-border">
-                                    {b.brandName}
-                                </span>
-                            ))}
-                        </div>
-                    )}
+
+                    {/* Workload: one divided strip; zeros sit back in grey */}
+                    <dl className={cn('mt-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-border', isAgencyOwner ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
+                        {figures.map((figure, i) => (
+                            <div key={figure.label} className={cn('px-4 py-3 transition-colors hover:bg-brand/[0.05]', i > 0 && 'border-l border-border', i === 2 && 'max-sm:border-l-0 max-sm:border-t', i === 3 && 'max-sm:border-t')}>
+                                <dd className={cn('font-display text-2xl font-semibold leading-none tracking-tight tabular-nums', !workloadLoading && figure.value === 0 && 'text-muted-foreground/40')}>{workloadLoading ? '—' : figure.value}</dd>
+                                <dt className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                    {'live' in figure && figure.live ? (
+                                        <span className="relative flex h-1.5 w-1.5">
+                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-75" />
+                                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
+                                        </span>
+                                    ) : <figure.icon className="h-3.5 w-3.5" />}
+                                    {figure.label}
+                                </dt>
+                            </div>
+                        ))}
+                    </dl>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                        <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isSettingStatus}
-                        onClick={() => setStatus({ managerId: member.id, isActive: !member.isActive })}
-                        className={cn(!member.isActive && 'text-green-600')}
-                    >
-                        {isSettingStatus ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                        ) : member.isActive ? (
-                            <UserX className="w-3.5 h-3.5 mr-1.5" />
-                        ) : (
-                            <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-                        )}
-                        {member.isActive ? 'Deactivate' : 'Reactivate'}
-                    </Button>
-                </div>
+            </section>
+
+            {/* ── The work: campaigns and programs side by side ── */}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                <WorkSection
+                    icon={Megaphone}
+                    title="Assigned campaigns"
+                    count={assignedCampaigns.length}
+                    loading={workloadLoading}
+                    emptyIcon={Megaphone}
+                    emptyTitle="No campaigns assigned"
+                    emptyText="Assign a campaign from the member's brands so they can start managing it."
+                    actionLabel={canAssign ? 'Assign campaign' : undefined}
+                    onAction={() => setAssignPicker('campaign')}
+                >
+                    {assignedCampaigns.map((c) => (
+                        <CampaignRow
+                            key={c.id}
+                            campaign={c}
+                            onChangeOwner={() => setOwnerChange({ kind: 'campaign', id: c.id, name: c.name, agentId: c.agentId, brandId: c.brandId })}
+                        />
+                    ))}
+                </WorkSection>
+
+                <WorkSection
+                    icon={Rocket}
+                    title="Assigned programs"
+                    count={assignedPrograms.length}
+                    loading={workloadLoading}
+                    emptyIcon={Rocket}
+                    emptyTitle="No programs assigned"
+                    emptyText="Assign a program from the member's brands so they can start managing it."
+                    actionLabel={canAssign ? 'Assign program' : undefined}
+                    onAction={() => setAssignPicker('program')}
+                >
+                    {assignedPrograms.map((p) => (
+                        <ProgramRow
+                            key={p.id}
+                            program={p}
+                            onChangeOwner={() => setOwnerChange({ kind: 'program', id: p.id, name: p.name, agentId: p.agentId, brandId: p.brandId })}
+                        />
+                    ))}
+                </WorkSection>
             </div>
-
-            {/* Workload stats */}
-            <div className={cn('mb-6 grid grid-cols-2 gap-3 sm:gap-4', isAgencyOwner ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
-                <StatCard size="compact" tint="brand" icon={Megaphone} label="Assigned Campaigns" value={stats?.assignedCampaigns ?? 0} />
-                <StatCard size="compact" tint="emerald" icon={Activity} label="Active Campaigns" value={stats?.activeCampaigns ?? 0} />
-                <StatCard size="compact" tint="violet" icon={Rocket} label="Programs" value={stats?.assignedPrograms ?? 0} />
-                {isAgencyOwner && (
-                    <StatCard size="compact" tint="blue" icon={Building2} label="Brands Managed" value={stats?.brandsManaged ?? 0} />
-                )}
-            </div>
-
-            {/* Assigned campaigns */}
-            <WorkSection
-                title="Assigned campaigns"
-                subtitle="Campaigns this member is responsible for running."
-                loading={workloadLoading}
-                emptyIcon={Megaphone}
-                emptyTitle="No campaigns assigned"
-                emptyText="Assign a campaign from the member's brands so they can start managing it."
-                actionLabel={canAssign ? 'Assign a campaign' : undefined}
-                onAction={() => setAssignPicker('campaign')}
-            >
-                {assignedCampaigns.map((c) => (
-                    <CampaignRow
-                        key={c.id}
-                        campaign={c}
-                        onChangeOwner={() => setOwnerChange({ kind: 'campaign', id: c.id, name: c.name, agentId: c.agentId, brandId: c.brandId })}
-                    />
-                ))}
-            </WorkSection>
-
-            {/* Assigned programs */}
-            <WorkSection
-                title="Assigned programs"
-                subtitle="Programs this member is responsible for running."
-                loading={workloadLoading}
-                emptyIcon={Rocket}
-                emptyTitle="No programs assigned"
-                emptyText="Assign a program from the member's brands so they can start managing it."
-                actionLabel={canAssign ? 'Assign a program' : undefined}
-                onAction={() => setAssignPicker('program')}
-            >
-                {assignedPrograms.map((p) => (
-                    <ProgramRow
-                        key={p.id}
-                        program={p}
-                        onChangeOwner={() => setOwnerChange({ kind: 'program', id: p.id, name: p.name, agentId: p.agentId, brandId: p.brandId })}
-                    />
-                ))}
-            </WorkSection>
 
             {/* Edit member */}
             <EditTeamMemberModal
@@ -325,18 +375,19 @@ export default function TeamMemberDetailPage() {
 
 // ── Section wrapper ──────────────────────────────────────────────────────────
 function WorkSection({
+    icon: Icon,
     title,
-    subtitle,
+    count,
     loading,
-    emptyIcon,
     emptyTitle,
     emptyText,
     actionLabel,
     onAction,
     children,
 }: {
+    icon: React.ComponentType<{ className?: string }>;
     title: string;
-    subtitle: string;
+    count: number;
     loading: boolean;
     emptyIcon: React.ComponentType<{ className?: string }>;
     emptyTitle: string;
@@ -347,68 +398,123 @@ function WorkSection({
 }) {
     const hasItems = children.length > 0;
     return (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden mb-6">
-            <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                    <h3 className="text-base font-semibold font-display">{title}</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+        <section className="flex animate-fade-up flex-col overflow-hidden rounded-[28px] border border-border bg-card shadow-card [animation-delay:150ms]">
+            <div className="flex items-center justify-between gap-3 px-5 py-4">
+                <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand/15 ring-1 ring-brand/40"><Icon className="h-4 w-4" /></span>
+                    <h3 className="flex min-w-0 items-center gap-2 font-display text-base font-semibold tracking-tight">
+                        <span className="truncate">{title}</span>
+                        <span className="rounded-full bg-secondary px-2 py-0.5 font-sans text-[11px] font-semibold tabular-nums text-muted-foreground">{count}</span>
+                    </h3>
                 </div>
                 {actionLabel && (
-                    <Button size="sm" variant="outline" onClick={onAction} className="shrink-0">
-                        <Plus className="w-3.5 h-3.5 mr-1.5" /> {actionLabel}
-                    </Button>
+                    <button
+                        type="button"
+                        onClick={onAction}
+                        className="group/add flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card pl-1 pr-3.5 text-xs font-semibold transition-colors hover:border-foreground"
+                    >
+                        <span className="grid h-7 w-7 place-items-center rounded-full bg-brand text-black transition-transform duration-300 group-hover/add:rotate-90">
+                            <Plus className="h-3.5 w-3.5" />
+                        </span>
+                        {actionLabel}
+                    </button>
                 )}
             </div>
             {loading ? (
-                <div className="p-5 space-y-2">
-                    {[1, 2].map((i) => <div key={i} className="h-14 bg-secondary/60 rounded-lg animate-pulse" />)}
+                <div className="space-y-2 border-t border-border p-5">
+                    {[1, 2].map((i) => <div key={i} className="h-14 animate-pulse rounded-2xl bg-secondary/60" />)}
                 </div>
             ) : hasItems ? (
-                <div className="divide-y divide-border">{children}</div>
+                <ul className="border-t border-border">{children}</ul>
             ) : (
-                <EmptyState icon={emptyIcon as never} title={emptyTitle} description={emptyText} action={actionLabel ? { label: actionLabel, onClick: onAction } : undefined} />
+                // Ghost list: faint placeholder rows show what will appear here, with a short note.
+                <div className="relative border-t border-border px-5 py-4">
+                    <ul aria-hidden className="space-y-2.5 opacity-60 [mask-image:linear-gradient(to_bottom,black,transparent)]">
+                        {[0, 1, 2].map((i) => (
+                            <li key={i} className="flex items-center gap-3">
+                                <span className="h-9 w-9 shrink-0 rounded-xl bg-secondary" />
+                                <span className="flex-1 space-y-1.5">
+                                    <span className={cn('block h-2.5 rounded-full bg-secondary', ['w-2/3', 'w-1/2', 'w-3/5'][i])} />
+                                    <span className="block h-2 w-1/4 rounded-full bg-secondary/70" />
+                                </span>
+                                <span className="h-5 w-12 rounded-full bg-secondary/70" />
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="absolute inset-0 grid place-items-center px-6 text-center">
+                        <div>
+                            <p className="text-sm font-semibold">{emptyTitle}</p>
+                            <p className="mt-0.5 max-w-xs text-xs text-muted-foreground">{emptyText}</p>
+                        </div>
+                    </div>
+                </div>
             )}
-        </div>
+        </section>
     );
 }
 
 // ── Rows ─────────────────────────────────────────────────────────────────────
-function CampaignRow({ campaign, onChangeOwner }: { campaign: TeamWorkloadCampaign; onChangeOwner: () => void }) {
+// Same anatomy as the brand page's campaign rows: a yellow marker and tile on hover, the
+// change-owner action as a quiet round button that fills on hover.
+function WorkRow({ href, name, sub, status, thumb, fallback: Fallback, onChangeOwner }: {
+    href: string;
+    name: string;
+    sub?: string | null;
+    status: React.ReactNode;
+    thumb?: string | null;
+    fallback: React.ComponentType<{ className?: string }>;
+    onChangeOwner: () => void;
+}) {
     return (
-        <div className="flex items-center gap-3 px-5 py-3">
-            <div className="w-11 h-11 rounded-lg bg-secondary overflow-hidden shrink-0">
-                {campaign.thumbnailUrl && <ApiImage src={campaign.thumbnailUrl} alt={campaign.name} className="w-full h-full object-cover" />}
+        <li className="group/row relative flex items-center gap-3.5 border-b border-border px-6 py-3.5 transition-colors last:border-0 hover:bg-brand/[0.05]">
+            <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] scale-y-0 rounded-r-full bg-brand transition-transform duration-300 group-hover/row:scale-y-100" />
+            <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-secondary transition-colors group-hover/row:bg-brand">
+                {thumb ? <ApiImage src={thumb} alt={name} className="h-full w-full object-cover" /> : <Fallback className="h-4 w-4 text-foreground/60" />}
             </div>
             <div className="min-w-0 flex-1">
-                <Link to={`/campaigns/${campaign.id}`} className="text-sm font-medium truncate hover:underline block">{campaign.name}</Link>
-                <div className="flex items-center gap-2 mt-0.5">
-                    {campaign.brandName && <span className="text-xs text-muted-foreground truncate">{campaign.brandName}</span>}
-                    <CampaignStatusBadge campaign={campaign} className="scale-90 origin-left" />
+                <Link to={href} className="block truncate text-sm font-semibold underline-offset-4 hover:underline">{name}</Link>
+                <div className="mt-0.5 flex items-center gap-2">
+                    {sub && <span className="truncate text-[11px] text-muted-foreground">{sub}</span>}
+                    {status}
                 </div>
             </div>
-            <Button size="sm" variant="ghost" onClick={onChangeOwner} className="shrink-0">
-                <UserCog className="w-3.5 h-3.5 mr-1.5" /> Change team member
-            </Button>
-        </div>
+            <button
+                type="button"
+                onClick={onChangeOwner}
+                title="Change team member"
+                aria-label={`Change team member for ${name}`}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-foreground hover:bg-foreground hover:text-brand"
+            >
+                <UserCog className="h-3.5 w-3.5" />
+            </button>
+        </li>
+    );
+}
+
+function CampaignRow({ campaign, onChangeOwner }: { campaign: TeamWorkloadCampaign; onChangeOwner: () => void }) {
+    return (
+        <WorkRow
+            href={`/campaigns/${campaign.id}`}
+            name={campaign.name}
+            sub={campaign.brandName}
+            status={<CampaignStatusBadge campaign={campaign} className="scale-90 origin-left" />}
+            thumb={campaign.thumbnailUrl}
+            fallback={Megaphone}
+            onChangeOwner={onChangeOwner}
+        />
     );
 }
 
 function ProgramRow({ program, onChangeOwner }: { program: TeamWorkloadProgram; onChangeOwner: () => void }) {
     return (
-        <div className="flex items-center gap-3 px-5 py-3">
-            <div className="w-11 h-11 rounded-lg bg-secondary overflow-hidden shrink-0 flex items-center justify-center">
-                {program.thumbnailUrl ? <ApiImage src={program.thumbnailUrl} alt={program.name} className="w-full h-full object-cover" /> : <Rocket className="w-5 h-5 text-muted-foreground/50" />}
-            </div>
-            <div className="min-w-0 flex-1">
-                <Link to={`/programs/${program.id}`} className="text-sm font-medium truncate hover:underline block">{program.name}</Link>
-                <div className="flex items-center gap-2 mt-0.5">
-                    {program.brandName && <span className="text-xs text-muted-foreground truncate">{program.brandName}</span>}
-                    <StatusBadge status={program.status as never} className="scale-90 origin-left" />
-                </div>
-            </div>
-            <Button size="sm" variant="ghost" onClick={onChangeOwner} className="shrink-0">
-                <UserCog className="w-3.5 h-3.5 mr-1.5" /> Change team member
-            </Button>
-        </div>
+        <WorkRow
+            href={`/programs/${program.id}`}
+            name={program.name}
+            sub={program.brandName}
+            status={<StatusBadge status={program.status as never} className="scale-90 origin-left" />}
+            thumb={program.thumbnailUrl}
+            fallback={Rocket}
+            onChangeOwner={onChangeOwner}
+        />
     );
 }

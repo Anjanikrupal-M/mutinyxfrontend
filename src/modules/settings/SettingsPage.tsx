@@ -297,16 +297,15 @@ export default function SettingsPage() {
 
             {tab === 'account' && (
                 <div className="space-y-5">
-                    {/* Profile summary */}
-                    <section className={cn(SECTION_CARD, 'relative flex items-center gap-4 p-6')}>
-                        <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand/20 blur-3xl" />
-                        <span className="relative grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand font-display text-xl font-bold text-black">
+                    {/* Profile summary — a small highlighted name card, only as wide as its content */}
+                    <section className="flex w-full animate-fade-up items-center gap-3 rounded-2xl border border-brand/50 bg-brand/10 py-2.5 pl-2.5 pr-5 shadow-sm sm:w-fit">
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand font-display text-sm font-bold text-black ring-2 ring-card">
                             {initials}
                         </span>
-                        <div className="relative min-w-0">
-                            <p className="truncate font-display text-xl font-bold tracking-tight">{userDetails.name || '—'}</p>
-                            <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-muted-foreground">
-                                <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <div className="min-w-0">
+                            <p className="truncate font-display text-base font-bold leading-tight tracking-tight">{userDetails.name || '—'}</p>
+                            <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                                <Mail className="h-3 w-3 shrink-0" />
                                 {userDetails.email}
                             </p>
                         </div>

@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowUpRight, BadgeCheck, BarChart3, Check, ChevronLeft, ChevronRight, Database, Loader2, MapPin, RotateCcw, Search, TrendingUp, Users, X } from 'lucide-react';
+import { ArrowUpRight, BadgeCheck, BarChart3, ChevronLeft, ChevronRight, Database, Loader2, MapPin, Plus, RotateCcw, Search, Star, TrendingUp, Users, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ApiImage } from '@/shared/components/ApiImage';
+import { PageHeader } from '@/shared/components/PageHeader';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useInfluencerSearch, useInfluencersByIds, type Influencer } from './hooks/useInfluencers';
 import { MAX_COMPARE, useCompareStore } from './stores/compareStore';
@@ -146,7 +148,7 @@ function CompareTable({ ids }: { ids: string[] }) {
 
   return (
     <div className="w-full">
-      <section className="rounded-2xl border border-border bg-card overflow-x-auto lg:overflow-visible shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <section className="overflow-x-auto rounded-[28px] border border-border bg-card shadow-card lg:overflow-visible">
         {/* Full width with a fixed layout: the label column has a set width and the creator
             columns split the rest equally, so a long name can't widen its own column. */}
         <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-0 text-sm">
@@ -156,7 +158,7 @@ function CompareTable({ ids }: { ids: string[] }) {
           </colgroup>
           <thead>
             <tr>
-              <th className={cn(labelCell, 'lg:sticky lg:top-16 z-20 rounded-tl-2xl py-4 text-left align-bottom border-b')}>
+              <th className={cn(labelCell, 'lg:sticky lg:top-16 z-20 rounded-tl-[28px] py-4 text-left align-bottom border-b')}>
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Metric</span>
               </th>
               {ids.map((id, i) => {
@@ -168,7 +170,7 @@ function CompareTable({ ids }: { ids: string[] }) {
                     className={cn(
                       'lg:sticky lg:top-16 z-10 bg-card px-4 py-4 text-left font-normal align-top border-b border-border',
                       i < ids.length - 1 && 'border-r',
-                      i === ids.length - 1 && 'rounded-tr-2xl',
+                      i === ids.length - 1 && 'rounded-tr-[28px]',
                     )}
                   >
                     {query?.isLoading ? (
@@ -182,8 +184,11 @@ function CompareTable({ ids }: { ids: string[] }) {
                       <div className="flex items-start gap-3 min-w-0">
                         {creator ? (
                           <>
-                            <span className="w-11 h-11 rounded-xl bg-secondary overflow-hidden flex items-center justify-center font-bold shrink-0">
-                              {creator.userAvatarUrl ? <ApiImage src={creator.userAvatarUrl} alt={creator.userName} className="w-full h-full object-cover" /> : creator.userName?.[0]}
+                            <span className="relative shrink-0">
+                              <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-secondary font-bold ring-2 ring-card">
+                                {creator.userAvatarUrl ? <ApiImage src={creator.userAvatarUrl} alt={creator.userName} className="w-full h-full object-cover" /> : creator.userName?.[0]}
+                              </span>
+                              <span className="absolute -left-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-foreground text-[10px] font-bold text-brand ring-2 ring-card">{i + 1}</span>
                             </span>
                             <span className="flex-1 min-w-0">
                               <span className="block font-bold truncate" title={creator.userName}>{creator.userName}</span>
@@ -202,11 +207,11 @@ function CompareTable({ ids }: { ids: string[] }) {
                         <button
                           type="button"
                           onClick={() => remove(id)}
-                          className="p-1 -mr-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-secondary shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
+                          className="grid h-7 w-7 -mr-1 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-[#E50914] hover:text-[#E50914] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
                           title="Remove from comparison"
                           aria-label="Remove from comparison"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     )}
@@ -256,8 +261,11 @@ function MetricGroupRows({ title, metrics, creators, queries, labelCell, isLast 
   return (
     <>
       <tr>
-        <td colSpan={creators.length + 1} className="bg-secondary/60 px-4 py-2 border-b border-border">
-          <span className="sticky left-4 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
+        <td colSpan={creators.length + 1} className="border-b border-border bg-card px-4 pb-2 pt-4">
+          <span className="sticky left-4 inline-flex items-center gap-1.5 rounded-full bg-brand/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ring-1 ring-brand/40">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+            {title}
+          </span>
         </td>
       </tr>
       {metrics.map((metric, mi) => {
@@ -266,7 +274,7 @@ function MetricGroupRows({ title, metrics, creators, queries, labelCell, isLast 
         const lastRow = isLast && mi === metrics.length - 1;
         return (
           <tr key={metric.label}>
-            <td className={cn(labelCell, 'py-3 text-xs text-muted-foreground', !lastRow && 'border-b', lastRow && 'rounded-bl-2xl')}>
+            <td className={cn(labelCell, 'py-3 text-xs text-muted-foreground', !lastRow && 'border-b', lastRow && 'rounded-bl-[28px]')}>
               <span className="flex items-center gap-1.5"><metric.icon className="w-3.5 h-3.5 shrink-0" />{metric.label}</span>
             </td>
             {values.map((value, i) => {
@@ -278,8 +286,8 @@ function MetricGroupRows({ title, metrics, creators, queries, labelCell, isLast 
                     'px-4 py-3 border-border align-middle text-left',
                     !lastRow && 'border-b',
                     i < values.length - 1 && 'border-r',
-                    isBest && 'bg-emerald-500/[0.06]',
-                    lastRow && i === values.length - 1 && 'rounded-br-2xl',
+                    isBest && 'bg-brand/[0.08]',
+                    lastRow && i === values.length - 1 && 'rounded-br-[28px]',
                   )}
                 >
                   {queries[i]?.isLoading ? (
@@ -287,10 +295,11 @@ function MetricGroupRows({ title, metrics, creators, queries, labelCell, isLast 
                   ) : !value || value.text === UNAVAILABLE ? (
                     <span className="text-muted-foreground/60" title="No data">—</span>
                   ) : (
-                    <span className={cn('inline-flex flex-wrap items-center gap-1.5 font-semibold break-words', isBest && 'text-emerald-700 dark:text-emerald-400')}>
+                    <span className="inline-flex flex-wrap items-center gap-1.5 font-semibold break-words">
                       {value.text}
                       {isBest && (
-                        <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold">
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-foreground px-1.5 py-0.5 text-[10px] font-bold text-brand">
+                          <Star className="h-2.5 w-2.5 fill-brand" />
                           {metric.best === 'low' ? 'Lowest' : 'Best'}
                         </span>
                       )}
@@ -313,7 +322,6 @@ function MetricGroupRows({ title, metrics, creators, queries, labelCell, isLast 
 function ComparePicker() {
   const creators = useCompareStore((state) => state.creators);
   const toggle = useCompareStore((state) => state.toggle);
-  const remove = useCompareStore((state) => state.remove);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const q = useDebounce(query.trim(), 300);
@@ -325,12 +333,12 @@ function ComparePicker() {
   const full = creators.length >= MAX_COMPARE;
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 sm:p-5 mb-6">
+    <section className="mb-6 rounded-[28px] border border-border bg-card p-4 shadow-card sm:p-5">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">Choose influencers</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Pick 2 to {MAX_COMPARE}. {creators.length} selected{full ? ' — remove one to pick another.' : '.'}
+          <h2 className="font-display text-base font-semibold tracking-tight">Pick your contenders</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Tap a creator to add them to the lineup{full ? ' — it\'s full, remove one to swap.' : '.'}
           </p>
         </div>
         <div className="relative w-full lg:w-80">
@@ -339,27 +347,12 @@ function ComparePicker() {
             value={query}
             onChange={(event) => { setQuery(event.target.value); setPage(1); }}
             placeholder="Search by name or handle..."
-            className="w-full h-10 pl-9 pr-9 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-[#fedc03]/50"
+            className="h-10 w-full rounded-full border border-border bg-card pl-9 pr-9 text-sm shadow-sm transition-all focus:border-foreground/30 focus:outline-none focus:ring-4 focus:ring-brand/20"
           />
           {isFetching && <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />}
         </div>
       </div>
 
-      {creators.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {creators.map((creator) => (
-            <span key={creator.id} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/50 pl-1 pr-2 py-1 text-xs font-medium">
-              <span className="w-5 h-5 rounded-full overflow-hidden bg-secondary flex items-center justify-center text-[10px] font-bold">
-                {creator.avatarUrl ? <ApiImage src={creator.avatarUrl} alt={creator.name} className="w-full h-full object-cover" /> : creator.name?.[0]}
-              </span>
-              {creator.name}
-              <button type="button" onClick={() => remove(creator.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Remove ${creator.name}`}>
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
         {isLoading
@@ -377,12 +370,12 @@ function ComparePicker() {
                   aria-pressed={selected}
                   onClick={() => toggle({ id: inf.id, name: inf.userName ?? 'Unknown', handle: inf.handle, avatarUrl: inf.userAvatarUrl })}
                   className={cn(
-                    'flex items-center gap-3 rounded-xl border p-2.5 text-left transition-premium',
-                    selected ? 'border-foreground bg-secondary/50' : 'border-border hover:border-foreground/30 hover:bg-secondary/30',
-                    disabled && 'opacity-50 cursor-not-allowed hover:border-border hover:bg-transparent',
+                    'group/pick flex items-center gap-3 rounded-2xl border p-2.5 text-left transition-all duration-200',
+                    selected ? 'border-brand bg-brand/[0.07] ring-2 ring-brand/30' : 'border-border hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-card',
+                    disabled && 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:border-border hover:shadow-none',
                   )}
                 >
-                  <span className="w-10 h-10 rounded-lg overflow-hidden bg-secondary flex items-center justify-center font-bold shrink-0">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary font-bold">
                     {inf.userAvatarUrl ? <ApiImage src={inf.userAvatarUrl} alt={inf.userName} className="w-full h-full object-cover" /> : inf.userName?.[0]}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -391,11 +384,12 @@ function ComparePicker() {
                       {[inf.handle, inf.followerCount ? `${formatNumber(inf.followerCount)} followers` : null].filter(Boolean).join(' · ')}
                     </span>
                   </span>
+                  {/* Slot number once picked; a + before */}
                   <span className={cn(
-                    'w-5 h-5 rounded-md border flex items-center justify-center shrink-0',
-                    selected ? 'border-foreground bg-foreground text-background' : 'border-border',
+                    'grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold transition-all duration-200',
+                    selected ? 'bg-foreground text-brand' : 'border border-border text-muted-foreground group-hover/pick:border-foreground/40 group-hover/pick:text-foreground',
                   )}>
-                    {selected && <Check className="w-3.5 h-3.5" />}
+                    {selected ? creators.findIndex((c) => c.id === inf.id) + 1 : <Plus className="h-3 w-3" />}
                   </span>
                 </button>
               );
@@ -403,16 +397,108 @@ function ComparePicker() {
       </div>
 
       {totalPages > 1 && (
-        <div className="mt-3 flex items-center justify-end gap-2 text-xs text-muted-foreground">
-          <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="p-1.5 rounded-lg border border-border hover:bg-secondary disabled:opacity-40" aria-label="Previous page">
+        <div className="mt-4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="grid h-8 w-8 place-items-center rounded-full border border-border bg-card transition-colors hover:border-foreground disabled:opacity-40" aria-label="Previous page">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span>Page {page} of {totalPages}</span>
-          <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="p-1.5 rounded-lg border border-border hover:bg-secondary disabled:opacity-40" aria-label="Next page">
+          <span>Page <strong className="font-semibold text-foreground">{page}</strong> of {totalPages}</span>
+          <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="grid h-8 w-8 place-items-center rounded-full border border-border bg-card transition-colors hover:border-foreground disabled:opacity-40" aria-label="Next page">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       )}
+    </section>
+  );
+}
+
+/**
+ * The lineup: a rail with one round slot per creator (up to MAX_COMPARE). Picked slots show the
+ * creator; open ones are dashed and numbered. The rail fills yellow from slot to slot as the
+ * lineup grows.
+ */
+function CompareLineup() {
+  const creators = useCompareStore((state) => state.creators);
+  const remove = useCompareStore((state) => state.remove);
+  const slots = Array.from({ length: MAX_COMPARE }, (_, i) => creators[i] ?? null);
+  const needed = Math.max(0, 2 - creators.length);
+  // The rail runs between the first and last slot centres (half a column in from each edge).
+  const edge = 50 / MAX_COMPARE;
+  const filledSpan = creators.length > 1 ? ((creators.length - 1) / (MAX_COMPARE - 1)) * (100 - edge * 2) : 0;
+
+  return (
+    <section className="mb-5 animate-fade-up rounded-[28px] border border-border bg-card p-4 shadow-card sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand/15 ring-1 ring-brand/40"><Users className="h-4 w-4" /></span>
+          <div>
+            <p className="font-display text-base font-semibold tracking-tight">Your lineup</p>
+            <p className="text-xs text-muted-foreground">
+              {needed > 0
+                ? `Pick ${needed} more creator${needed === 1 ? '' : 's'} to see them side by side.`
+                : 'Ready — the comparison is below.'}
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold tabular-nums">
+          {creators.length}<span className="text-muted-foreground"> / {MAX_COMPARE}</span>
+        </span>
+      </div>
+
+      <div className="relative mt-5">
+        {/* The rail behind the slots, and its yellow fill */}
+        <svg aria-hidden viewBox="0 0 100 2" preserveAspectRatio="none" className="absolute inset-x-0 top-[27px] h-0.5 w-full">
+          <rect x={edge} width={100 - edge * 2} height="2" rx="1" className="fill-foreground/[0.08]" />
+          <rect x={edge} width={filledSpan} height="2" rx="1" className="fill-brand transition-[width] duration-500 ease-out" />
+        </svg>
+        {filledSpan > 0 && (
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute top-[25px] h-1.5 w-12 rounded-full bg-gradient-to-r from-transparent via-white to-transparent"
+            initial={{ left: `${edge}%`, opacity: 0 }}
+            animate={{ left: [`${edge}%`, `calc(${edge + filledSpan}% - 3rem)`], opacity: [0, 1, 0] }}
+            transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 0.6, ease: 'easeInOut' }}
+          />
+        )}
+
+        <ol className="relative grid grid-cols-4">
+          {slots.map((slot, i) => (
+            <li key={i} className="flex min-w-0 flex-col items-center px-1 text-center">
+              {slot ? (
+                <div className="group/slot relative animate-pop transition-transform duration-300 hover:-translate-y-1">
+                  <span aria-hidden className="absolute -inset-2 rounded-full bg-brand/35 blur-md transition-opacity duration-300 group-hover/slot:opacity-100 opacity-70" />
+                  <span className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-secondary font-display text-lg font-bold ring-[3px] ring-brand ring-offset-2 ring-offset-card">
+                    {slot.avatarUrl ? <ApiImage src={slot.avatarUrl} alt={slot.name} className="h-full w-full object-cover transition-transform duration-500 group-hover/slot:scale-110" /> : slot.name?.[0]}
+                  </span>
+                  <span className="absolute -left-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-foreground text-[10px] font-bold text-brand ring-2 ring-card">{i + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => remove(slot.id)}
+                    aria-label={`Remove ${slot.name}`}
+                    title="Remove from lineup"
+                    className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-card text-muted-foreground opacity-0 shadow-card ring-1 ring-border transition-all hover:text-[#E50914] focus-visible:opacity-100 group-hover/slot:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-dashed border-foreground/15 bg-card font-display text-sm font-semibold text-muted-foreground">
+                  {i + 1}
+                </span>
+              )}
+              <p className={cn('mt-2.5 w-full truncate text-xs font-semibold', !slot && 'font-medium text-muted-foreground')}>
+                {slot ? slot.name : i < 2 ? 'Pick a creator' : 'Optional'}
+              </p>
+              {slot ? (
+                <span className="mt-1 max-w-full truncate rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {slot.handle ? `@${String(slot.handle).replace(/^@/, '')}` : 'Creator'}
+                </span>
+              ) : (
+                <p className="w-full truncate text-[10px] text-muted-foreground">Slot {i + 1}</p>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   );
 }
@@ -423,35 +509,32 @@ export default function InfluencerComparePage() {
 
   return (
     <div className="w-full pb-12 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-        <div>
-          <Link to="/discover" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3"><ArrowLeft className="w-4 h-4" />Back to Influencers</Link>
-          <h1 className="text-2xl font-bold font-display">Compare influencers</h1>
-          <p className="text-sm text-muted-foreground mt-1">Decision-ready creator, audience, performance, commercial, and trust signals side by side.</p>
-        </div>
-        {creators.length > 0 && (
+      <Link to="/discover" className="group/back mb-2 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground">
+        <ChevronLeft className="h-4 w-4 transition-transform group-hover/back:-translate-x-0.5" />
+        Influencers
+      </Link>
+      <PageHeader
+        title="Compare influencers"
+        description="Line up 2 to 4 creators and see audience, performance, price and trust side by side."
+        animated
+        size="lg"
+        hideHireManager
+        actions={creators.length > 0 ? (
           <button
             type="button"
             onClick={clear}
-            className="inline-flex items-center gap-2 h-9 px-3.5 rounded-lg border border-border bg-card text-sm font-medium text-foreground shadow-sm hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive transition-premium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0 self-start sm:self-auto"
+            className="group/clear inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 text-[13px] font-semibold shadow-sm transition-colors hover:border-[#E50914] hover:text-[#E50914]"
           >
-            <RotateCcw className="w-4 h-4" />
-            Clear comparison
+            <RotateCcw className="h-4 w-4 transition-transform duration-500 group-hover/clear:-rotate-180" />
+            Clear lineup
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
+      <CompareLineup />
       <ComparePicker />
 
-      {creators.length < 2 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
-          <Users className="w-7 h-7 mx-auto text-muted-foreground mb-3" />
-          <p className="font-semibold">Select at least two influencers</p>
-          <p className="text-sm text-muted-foreground mt-1">Tick influencers in the list above — the comparison appears here. You can compare up to {MAX_COMPARE}.</p>
-        </div>
-      ) : (
-        <CompareTable ids={creators.map((creator) => creator.id)} />
-      )}
+      {creators.length >= 2 && <CompareTable ids={creators.map((creator) => creator.id)} />}
     </div>
   );
 }

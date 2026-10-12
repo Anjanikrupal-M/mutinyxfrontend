@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserCheck, UserX, Building2, Plus, Sparkles, LockKeyhole, Search, X } from 'lucide-react';
+import { Users, Plus, Sparkles, LockKeyhole, Search, X } from 'lucide-react';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { SegmentedTabs } from '@/shared/components/SegmentedTabs';
 import { EmptyState } from '@/shared/components/EmptyState';
@@ -45,9 +45,6 @@ export default function TeamsPage() {
     const activeMembers = teamMembers.filter((m) => m.isActive).length;
     const inactiveMembers = totalMembers - activeMembers;
     const activeShare = totalMembers ? Math.round((activeMembers / totalMembers) * 100) : 0;
-    const brandsCovered = isAgencyOwner
-        ? new Set(teamMembers.flatMap((m) => m.brands.map((b) => b.id))).size
-        : 0;
     const newestMember = useMemo(
         () => [...teamMembers].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0],
         [teamMembers],
@@ -125,7 +122,7 @@ export default function TeamsPage() {
 
             {/* Overview — four equal tiles from one design: icon, big number, a small visual of its own,
                 and a footer line. Hover blooms a glow, tilts the icon and draws a yellow line. */}
-            <div className={cn('mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2', isAgencyOwner ? 'lg:grid-cols-4' : 'lg:grid-cols-3')}>
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:max-w-md">
                 <MetricTile
                     featured
                     icon={Users}
@@ -169,39 +166,6 @@ export default function TeamsPage() {
                         </button>
                     }
                 />
-                <MetricTile
-                    icon={UserCheck}
-                    label="Active"
-                    value={activeMembers}
-                    suffix={totalMembers > 0 ? `/ ${totalMembers}` : undefined}
-                    tone="success"
-                    visual={<PipMeter filled={activeMembers} total={totalMembers} tone="success" />}
-                    footer={newestMember ? <>Newest: <strong className="font-semibold text-foreground">{newestMember.name.split(' ')[0]}</strong></> : 'Can sign in today'}
-                    className="[animation-delay:80ms]"
-                />
-                <MetricTile
-                    icon={UserX}
-                    label="Inactive"
-                    value={inactiveMembers}
-                    suffix={totalMembers > 0 ? `/ ${totalMembers}` : undefined}
-                    tone="muted"
-                    visual={<PipMeter filled={inactiveMembers} total={totalMembers} tone="muted" />}
-                    footer="Access paused, work kept"
-                    className="[animation-delay:140ms]"
-                />
-                {isAgencyOwner && (
-                    <MetricTile
-                        icon={Building2}
-                        label="Brands covered"
-                        value={brandsCovered}
-                        suffix={`/ ${assignableBrands.length}`}
-                        visual={<PipMeter filled={brandsCovered} total={assignableBrands.length} tone="brand" />}
-                        footer={brandsCovered >= assignableBrands.length && assignableBrands.length > 0
-                            ? <>Every brand <strong className="font-semibold text-foreground">has a manager</strong></>
-                            : `of ${assignableBrands.length} owned brands`}
-                        className="[animation-delay:200ms]"
-                    />
-                )}
             </div>
 
             {/* Toolbar — status segments and search */}
@@ -317,31 +281,6 @@ export default function TeamsPage() {
 
 type MetricTone = 'brand' | 'success' | 'muted';
 
-const PIP_FILL: Record<MetricTone, string> = {
-    brand: 'bg-brand',
-    success: 'bg-success',
-    muted: 'bg-foreground/45',
-};
-
-/** One pill per item (up to 12), the first `filled` coloured — reads as "3 of 4" at a glance. */
-function PipMeter({ filled, total, tone }: { filled: number; total: number; tone: MetricTone }) {
-    const count = Math.min(Math.max(total, 1), 12);
-    const lit = total > 12 ? Math.round((filled / total) * 12) : filled;
-    return (
-        <div className="flex h-2 w-full items-center gap-1" aria-label={`${filled} of ${total}`}>
-            {Array.from({ length: count }, (_, i) => (
-                <span
-                    key={i}
-                    className={cn(
-                        'h-full flex-1 rounded-full transition-all duration-500',
-                        i < lit ? PIP_FILL[tone] : 'bg-foreground/[0.08]',
-                        i < lit && 'group-hover:scale-y-125',
-                    )}
-                />
-            ))}
-        </div>
-    );
-}
 
 interface MetricTileProps {
     icon: typeof Users;

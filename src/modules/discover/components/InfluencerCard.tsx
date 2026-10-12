@@ -52,7 +52,8 @@ function displayCountry(value: string | null | undefined): string | null {
 }
 
 // Circumference of the mini Brand Fit ring on the photo (r = 7).
-const FIT_RING_LENGTH = 2 * Math.PI * 7;
+// Circumference of the fit medallion's ring (r = 11.5 in a 28-unit box).
+const FIT_RING_LENGTH = 2 * Math.PI * 11.5;
 
 /** One cell of the stat strip at the foot of the card. */
 function StatCell({ label, info, children }: { label: string; info: string; children: React.ReactNode }) {
@@ -184,39 +185,78 @@ export function InfluencerCard({ influencer: inf, campaignId, canSave, onSaveCli
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5 self-start">
-                    {/* Brand Fit — a mini yellow ring with the score. */}
+                    {/* Brand Fit medallion: a ring with the score inside and the verdict beside it. Hover for
+                        how it's built — category, location and engagement, each with its own bar. */}
                     {brandFit && fitScore != null && (
-                        <span
-                            className="flex items-center gap-1 rounded-full bg-foreground py-1 pl-1 pr-2 text-[11px] font-semibold text-background"
-                            title={`Brand Fit score: ${fitScore}% · ${brandFit.label}`}
-                        >
-                            <svg viewBox="0 0 18 18" className="h-4 w-4 -rotate-90" aria-hidden>
-                                <circle cx="9" cy="9" r="7" fill="none" strokeWidth="2.5" className="stroke-white/20" />
-                                <circle
-                                    cx="9" cy="9" r="7" fill="none" strokeWidth="2.5" strokeLinecap="round"
-                                    strokeDasharray={FIT_RING_LENGTH}
-                                    strokeDashoffset={FIT_RING_LENGTH * (1 - fitScore / 100)}
-                                    className="stroke-brand"
-                                />
-                            </svg>
-                            <span className="tabular-nums">{fitScore}%</span>
-                        </span>
+                        <div className="group/fit relative" onClick={(e) => e.preventDefault()}>
+                            <span
+                                className="flex items-center gap-1.5 rounded-full border border-border bg-card py-0.5 pl-0.5 pr-2.5 shadow-sm transition-colors duration-200 group-hover/fit:border-foreground/30"
+                                aria-label={`Brand Fit ${fitScore}%, ${brandFit.label}`}
+                            >
+                                <span className="relative grid h-7 w-7 place-items-center">
+                                    <svg viewBox="0 0 28 28" className="absolute inset-0 -rotate-90" aria-hidden>
+                                        <circle cx="14" cy="14" r="11.5" fill="none" strokeWidth="3" className="stroke-foreground/[0.08]" />
+                                        <circle
+                                            cx="14" cy="14" r="11.5" fill="none" strokeWidth="3" strokeLinecap="round"
+                                            strokeDasharray={FIT_RING_LENGTH}
+                                            strokeDashoffset={FIT_RING_LENGTH * (1 - fitScore / 100)}
+                                            className="stroke-brand transition-[stroke-dashoffset] duration-700 ease-out"
+                                        />
+                                    </svg>
+                                    <span className="relative font-display text-[9px] font-bold tabular-nums">{fitScore}</span>
+                                </span>
+                                <span className="text-[11px] leading-none text-muted-foreground">
+                                    <strong className="font-semibold text-foreground">{brandFit.label.replace(/ fit$/i, '')}</strong> fit
+                                </span>
+                            </span>
+
+                            {/* Breakdown on hover */}
+                            <div className="pointer-events-none absolute right-0 top-full z-30 mt-2 w-60 translate-y-1 rounded-2xl border border-border bg-card p-3.5 opacity-0 shadow-float transition-all duration-200 group-hover/fit:pointer-events-auto group-hover/fit:translate-y-0 group-hover/fit:opacity-100">
+                                <div className="flex items-baseline justify-between gap-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Brand fit</p>
+                                    <p className="font-display text-lg font-semibold leading-none tabular-nums">{fitScore}<span className="text-xs text-muted-foreground">%</span></p>
+                                </div>
+                                <p className="mt-0.5 text-xs font-semibold">{brandFit.label}</p>
+                                <ul className="mt-3 space-y-2 border-t border-border pt-3">
+                                    {([
+                                        ['Category', brandFit.reasons.category],
+                                        ['Location', brandFit.reasons.location],
+                                        ['Engagement', brandFit.reasons.quality],
+                                    ] as const).map(([name, part]) => {
+                                        const ratio = part.max > 0 ? part.score / part.max : 0;
+                                        return (
+                                            <li key={name} title={part.note}>
+                                                <div className="flex items-center justify-between text-[11px]">
+                                                    <span className="text-muted-foreground">{name}</span>
+                                                    <span className="font-semibold tabular-nums">{Math.round(ratio * 100)}%</span>
+                                                </div>
+                                                <svg viewBox="0 0 100 4" preserveAspectRatio="none" className="mt-1 h-1 w-full overflow-hidden rounded-full" aria-hidden>
+                                                    <rect width="100" height="4" className="fill-foreground/[0.07]" />
+                                                    <rect width={Math.max(ratio * 100, 2)} height="4" className="fill-brand" />
+                                                </svg>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        </div>
                     )}
                     {canSave && (
                         <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSaveClick(); }}
                             className={cn(
-                                'grid h-7 w-7 place-items-center rounded-full border transition-all duration-200 hover:scale-110',
+                                // Same height and shape as the fit chip beside it.
+                                'grid h-8 w-8 place-items-center rounded-full border shadow-sm transition-all duration-200 active:scale-90',
                                 inf.isBookmarked
-                                    ? 'border-brand bg-brand text-black'
-                                    : 'border-border bg-card text-foreground hover:border-foreground',
+                                    ? 'border-brand bg-brand/15 text-foreground'
+                                    : 'border-border bg-card text-foreground/70 hover:border-foreground/40 hover:text-foreground',
                             )}
                             title={inf.isBookmarked ? 'Manage Save Options' : 'Save Creator'}
                             aria-label={inf.isBookmarked ? `Manage saved ${inf.userName}` : `Save ${inf.userName}`}
                             aria-pressed={!!inf.isBookmarked}
                         >
-                            <Bookmark className={cn('h-3.5 w-3.5', inf.isBookmarked && 'fill-current')} />
+                            <Bookmark key={inf.isBookmarked ? 'on' : 'off'} className={cn('h-3.5 w-3.5', inf.isBookmarked && 'animate-pop fill-brand')} strokeWidth={2.25} />
                         </button>
                     )}
                 </div>
